@@ -2,7 +2,6 @@
 import datetime
 import logging
 import os
-
 from base.base_func import *
 from base.util import get_log_path
 from settings import project_root
@@ -223,7 +222,8 @@ if __name__ == '__main__':
 
     # 循环执行次数
     loop = 1
+    HOST = {"host": "0.0.0.0"}
 
     while loop >= 1:
-        run_case({"host": "0.0.0.0"}, case_total_list, project_root, if_failure_stop, run_in_dummy_mode, log)
+        run_case(HOST, case_total_list, project_root, if_failure_stop, run_in_dummy_mode, log)
         loop -= 1

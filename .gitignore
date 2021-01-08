@@ -1,0 +1,16 @@
+*.log
+*.log.*
+*.lock
+*.out
+*.pyc
+*.pyo
+*.txt
+*.zip
+
+*/results/*
+*/report/*
+
+.idea
+venv/
+__pycache__
+.DS_Store

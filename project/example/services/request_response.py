@@ -25,6 +25,11 @@ class AuthorizationRequest(BaseRequest):
 
 
 class AuthorizationResponse(BaseResponse):
+    """
+    {
+        "result"：{"token":"abcd"}
+    }
+    """
     schema = {
         "type": "object",
         "title": "The Authorization Schema",

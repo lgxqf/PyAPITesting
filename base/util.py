@@ -170,24 +170,18 @@ class Util:
 
     """
         Add ID and Project field for test case file
+        project_name: project name
         path_list: case directory list
     """
 
     @classmethod
-    def add_test_id(cls, path_list=None):
+    def add_test_id(cls, project_name, path_list=None):
         if path_list is None:
             path_list = []
         case_write_list = []
-        project_name = "Tianshu"
 
         for case_path in path_list:
             case_file = []
-
-            if "gateway" + os.sep + "cases" in case_path:
-                project_name = "Gateway"
-
-            if "tianshu" + os.sep + "cases" in case_path:
-                project_name = "Tianshu"
 
             for r, d, f in os.walk(case_path):
                 for item in f:
@@ -196,7 +190,6 @@ class Util:
 
             for test_case in case_file:
                 case_title = str(test_case.split(os.path.sep)[-1].replace('.py', ''))
-                # func_name = "def " + case_title + "("
 
                 with open(test_case, 'r', errors='ignore') as f:
                     file_content = ""

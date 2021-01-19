@@ -187,6 +187,7 @@ class Util:
                         continue
 
                     class_name = line.split(" ")[1]
+                    class_name = class_name.replace("{", "").replace("\n", "")
                     class_name_list.append(class_name)
                     class_type = "Message"
 

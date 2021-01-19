@@ -8,6 +8,7 @@ import traceback
 import requests
 import time
 
+from .api_type import APIType
 from .base_request import BaseResponse
 from .util import log_config
 
@@ -299,7 +300,7 @@ class BaseService(object):
 
 
 class InterfaceConfig(object):
-    def __init__(self, interface_info, interface_type=None, token_required=False, protocol='http'):
+    def __init__(self, interface_info, interface_type=APIType.internal, token_required=True, protocol='http'):
         self.interface_const = interface_info
         self.interface_type = interface_type
         self.token_required = token_required

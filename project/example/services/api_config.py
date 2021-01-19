@@ -7,5 +7,4 @@ class APINameList(object):
 
 
 class APIConfig:
-    Authorization = InterfaceConfig(
-        {'method': 'POST', 'uri': '/v1/auth'}, interface_type=APIType.public, token_required=False)
+    Authorization = InterfaceConfig({'method': 'POST', 'uri': '/v1/auth'}, interface_type=APIType.public)

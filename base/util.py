@@ -5,6 +5,8 @@ import string
 import time
 
 from random import sample
+
+from base.api_type import APIType
 from settings import project_root
 from logging.handlers import RotatingFileHandler
 
@@ -78,12 +80,91 @@ def get_project_path(cls, dir_name=None):
 
 class Util:
     """
+        Convert pb(.proto) to interface config file
+        file_name: proto file absolute path
+
+        service ProjectXX {
+            rpc VerifyToken(VTRequest) returns (VTResponse) {
+                option (google.api.http) = {
+                    get: "/v1/verify_token"
+                };
+            }
+        }
+    """
+
+    @classmethod
+    def pb_to_interface_config(cls, file_name, interface_type=APIType.internal):
+        if not os.path.isfile(file_name) or not file_name.endswith(".proto"):
+            print("Invalid file " + str(file_name))
+
+        rpc_prefix = "    rpc "
+        service_prefix = "service "
+        http_method_list = ["put", "post", "delete", "put"]
+        api_name_dict = {}
+
+        with open(file_name, "r") as pb:
+            line = " test"
+            # 找到service开头的部分
+            while line:
+                line = pb.readline()
+                if line.startswith(service_prefix):
+                    break
+
+            api_name_found = False
+            api = None
+
+            # 每个接口以 rcp 开头
+            while line:
+                line = pb.readline()
+                # 找到了接口 取出接口名字
+                # rpc VerifyToken(VTRequest) returns (VTResponse)
+                if line.startswith(rpc_prefix) and not api_name_found:
+                    api_start_index = len(rpc_prefix)
+                    api_end_index = line.index("(")
+                    api = line[api_start_index: api_end_index]
+                    api_name_found = True
+                    print(api)
+
+                if api_name_found:
+                    # 根据http method和 uir 拼接interface config
+                    # get: "/v1/verify_token"
+                    # VerifyToken = InterfaceConfig({'method':'POST:','uri':' "/v1/authorization_internal"'}, interface_type=APIType.internal)
+                    for method in http_method_list:
+                        if -1 != line.find(method + ":"):
+                            uri = line.split(":")[1].replace("\n", "")
+                            interface_str = "InterfaceConfig({'method': '" + method.upper() + "', 'uri': " + "'" + uri + "'}"
+                            if interface_type == APIType.internal:
+                                interface_str += ", interface_type=APIType.internal"
+                            if interface_type == APIType.public:
+                                interface_str += ", interface_type=APIType.public"
+                            interface_str += ")"
+                            api_name_found = False
+                            api_name_dict[api] = interface_str
+                            break
+
+        if len(api_name_dict.keys()) > 0:
+            with open("../api_config_internal.py", "w+") as py_file:
+                py_file.write("from base.api_type import APIType\n")
+                py_file.write("from base.base_func import InterfaceConfig\n")
+
+                py_file.write("\n\nclass APINameList(object):\n")
+                for api in api_name_dict.keys():
+                    py_file.write("    " + api + " = " + "'" + api + "'" + "\n")
+
+                py_file.write("\n\nclass APIConfig:\n")
+                for api in api_name_dict.keys():
+                    py_file.write("    " + api + " = " + api_name_dict[api] + "\n")
+
+        else:
+            print("No api is found in pb")
+
+    """
         Convert pb(.proto) to python request response class
         file_name: proto file absolute path
     """
 
     @classmethod
-    def pb2py(cls, file_name):
+    def pb_to_py(cls, file_name):
         if not os.path.isfile(file_name) or not file_name.endswith(".proto"):
             print("Invalid file " + str(file_name))
 
@@ -280,3 +361,7 @@ class ConfigParser:
         config.set(section, options, value)
         with open(file_path, "w") as f:
             config.write(f)
+
+
+if __name__ == '__main__':
+    Util.pb_to_interface_config("/Users/mayi/Project/PyAPITesting/x.proto")

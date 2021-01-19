@@ -132,7 +132,8 @@ class Util:
                     for method in http_method_list:
                         if -1 != line.find(method + ":"):
                             uri = line.split(":")[1].replace("\n", "")
-                            interface_str = "InterfaceConfig({'method': '" + method.upper() + "', 'uri': " + "'" + uri + "'}"
+                            interface_str = "InterfaceConfig({'method': '" + method.upper() + "', 'uri': " + uri.strip().replace(
+                                "\"", "'") + "}"
                             if interface_type == APIType.internal:
                                 interface_str += ", interface_type=APIType.internal"
                             if interface_type == APIType.public:

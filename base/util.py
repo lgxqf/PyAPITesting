@@ -80,178 +80,6 @@ def get_project_path(cls, dir_name=None):
 
 class Util:
     """
-        Convert pb(.proto) to interface config file
-        file_name: proto file absolute path
-
-        service ProjectXX {
-            rpc VerifyToken(VTRequest) returns (VTResponse) {
-                option (google.api.http) = {
-                    get: "/v1/verify_token"
-                };
-            }
-        }
-    """
-
-    @classmethod
-    def pb_to_interface_config(cls, file_name, interface_type=APIType.internal):
-        if not os.path.isfile(file_name) or not file_name.endswith(".proto"):
-            print("Invalid file " + str(file_name))
-
-        rpc_prefix = "    rpc "
-        service_prefix = "service "
-        http_method_list = ["put", "post", "delete", "put"]
-        api_name_dict = {}
-
-        with open(file_name, "r") as pb:
-            line = " test"
-            # 找到service开头的部分
-            while line:
-                line = pb.readline()
-                if line.startswith(service_prefix):
-                    break
-
-            api_name_found = False
-            api = None
-
-            # 每个接口以 rcp 开头
-            while line:
-                line = pb.readline()
-                # 找到了接口 取出接口名字
-                # rpc VerifyToken(VTRequest) returns (VTResponse)
-                if line.startswith(rpc_prefix) and not api_name_found:
-                    api_start_index = len(rpc_prefix)
-                    api_end_index = line.index("(")
-                    api = line[api_start_index: api_end_index]
-                    api_name_found = True
-                    print(api)
-
-                if api_name_found:
-                    # 根据http method和 uir 拼接interface config
-                    # get: "/v1/verify_token"
-                    # VerifyToken = InterfaceConfig({'method':'POST:','uri':' "/v1/authorization_internal"'}, interface_type=APIType.internal)
-                    for method in http_method_list:
-                        if -1 != line.find(method + ":"):
-                            uri = line.split(":")[1].replace("\n", "")
-                            interface_str = "InterfaceConfig({'method': '" + method.upper() + "', 'uri': " + uri.strip().replace(
-                                "\"", "'") + "}"
-                            if interface_type == APIType.internal:
-                                interface_str += ", interface_type=APIType.internal"
-                            if interface_type == APIType.public:
-                                interface_str += ", interface_type=APIType.public"
-                            interface_str += ")"
-                            api_name_found = False
-                            api_name_dict[api] = interface_str
-                            break
-
-        if len(api_name_dict.keys()) > 0:
-            with open("../api_config_internal.py", "w+") as py_file:
-                py_file.write("from base.api_type import APIType\n")
-                py_file.write("from base.base_func import InterfaceConfig\n")
-
-                py_file.write("\n\nclass APINameList(object):\n")
-                for api in api_name_dict.keys():
-                    py_file.write("    " + api + " = " + "'" + api + "'" + "\n")
-
-                py_file.write("\n\nclass APIConfig:\n")
-                for api in api_name_dict.keys():
-                    py_file.write("    " + api + " = " + api_name_dict[api] + "\n")
-
-        else:
-            print("No api is found in pb")
-
-    """
-        Convert pb(.proto) to python request response class
-        file_name: proto file absolute path
-    """
-
-    @classmethod
-    def pb_to_py(cls, file_name):
-        if not os.path.isfile(file_name) or not file_name.endswith(".proto"):
-            print("Invalid file " + str(file_name))
-
-        class_name_list = []
-        line = "test"
-
-        with open("pb.py", "w+") as py_file:
-            py_file.write("from common_service.base_request import Message, BaseRequest, BaseResponse\n")
-            with open(file_name, "r") as pb:
-
-                while line:
-                    line = pb.readline()
-
-                    # class found in pb
-                    is_enum = line.startswith("enum ")
-                    is_message = line.startswith("message ")
-
-                    if not is_enum and not is_message:
-                        continue
-
-                    class_name = line.split(" ")[1]
-                    class_name = class_name.replace("{", "").replace("\n", "")
-                    class_name_list.append(class_name)
-                    class_type = "Message"
-
-                    if "Request {" in line:
-                        class_type = "BaseRequest"
-
-                    if "Response {" in line:
-                        class_type = "BaseResponse"
-
-                    # write class name
-                    value = 2 * "\n" + "class " + class_name + "(" + class_type + ")" + ":\n"
-                    py_file.write(value)
-                    py_file.flush()
-                    strip_line = pb.readline().strip()
-
-                    if strip_line.endswith("}"):
-                        py_file.write(4 * " " + "pass\n")
-                        continue
-
-                    get_request_str = ["\n" + 4 * " " + "def get_request(self):\n", 8 * " " + "return {\n"]
-
-                    # end of class mark definition is }
-                    while not strip_line.endswith("}") and line:
-                        if strip_line.startswith("//") or not strip_line:
-                            strip_line = pb.readline().strip()
-                            continue
-
-                        content = " " * 4 + strip_line.replace(";", "") + "\n"
-
-                        if not is_enum:
-                            split_list = strip_line.split(" ")
-
-                            if "repeated" == split_list[0]:
-                                para_type = "repeated " + split_list[1]
-                                para_name = split_list[2]
-                                para_cmt = split_list[3:]
-                            else:
-                                para_type = split_list[0]
-                                para_name = split_list[1]
-                                para_cmt = split_list[2:]
-
-                            content = " " * 4 + para_name + " = \"" + para_name + "\"" + "  # " + para_type + " "
-                            for cmt in para_cmt:
-                                if cmt != "=":
-                                    content += cmt.replace(";", "")
-                            content += "\n"
-
-                            get_request_str.append(12 * " " + "self." + str(para_name) + ": {\n")
-                            get_request_str.append(16 * " " + "# " + para_type + "\n")
-                            get_request_str.append(16 * " " + "'valid': '',\n")
-                            get_request_str.append(16 * " " + "'invalid': ''\n")
-                            get_request_str.append(12 * " " + "},\n")
-
-                        py_file.write(content)
-                        strip_line = pb.readline().strip()
-                        print(strip_line)
-
-                    get_request_str.append(8 * " " + "}\n")
-
-                    if len(get_request_str) > 3:
-                        for content in get_request_str:
-                            py_file.write(content)
-
-    """
         Add ID and Project field for test case file
         project_name: project name
         path_list: case directory list
@@ -310,6 +138,227 @@ class Util:
         dir_index = cwd.rindex(project_root)
         return cwd[: dir_index + len(project_root)]
 
+    """
+        Convert pb(.proto) to interface config file
+        file_name: proto file absolute path
+        api_suffix: add suffix to api name, such as suffix Public->VerifyTokenPublic
+        service ProjectXX {
+            rpc VerifyToken(VTRequest) returns (VTResponse) {
+                option (google.api.http) = {
+                    get: "/v1/verify_token"
+                };
+            }
+        }
+    """
+
+    @classmethod
+    def pb_to_interface_config(cls, file_name, api_suffix="", interface_type=APIType.public, api_list_name=None):
+        if not os.path.isfile(file_name) or not file_name.endswith(".proto"):
+            print("Invalid file " + str(file_name))
+
+        rpc_prefix = "    rpc "
+        service_prefix = "service "
+        http_method_list = ["get", "post", "delete", "put"]
+        api_name_dict = {}
+
+        with open(file_name, "r") as pb:
+            line = " test"
+            # 找到service开头的部分
+            while line:
+                line = pb.readline()
+                if line.startswith(service_prefix):
+                    break
+
+            api_name_found = False
+            api = None
+
+            # 每个接口以 rcp 开头
+            while line:
+                line = pb.readline()
+                # 找到了接口 取出接口名字
+                # rpc VerifyToken(VTRequest) returns (VTResponse)
+                if line.startswith(rpc_prefix) and not api_name_found:
+                    api_start_index = len(rpc_prefix)
+                    api_end_index = line.index("(")
+                    api = line[api_start_index: api_end_index]
+                    api_name_found = True
+                    print(api)
+
+                if api_name_found:
+                    # 根据http method和 uir 拼接interface config
+                    # get: "/v1/verify_token"
+                    # VerifyToken = InterfaceConfig({'method':'POST:','uri':' "/v1/authorization_internal"'}, interface_type=APIType.internal)
+                    for method in http_method_list:
+                        if -1 != line.find(method + ":"):
+                            uri = line.split(":")[1].replace("\n", "")
+                            interface_str = "InterfaceConfig({'method': '" + method.upper() + "', 'uri': " + uri.strip().replace(
+                                "\"", "'") + "}"
+                            if interface_type == APIType.internal:
+                                interface_str += ", interface_type=APIType.internal"
+                            if interface_type == APIType.public:
+                                interface_str += ", interface_type=APIType.public"
+                            interface_str += ")"
+                            api_name_found = False
+                            api_name_dict[api] = interface_str
+                            break
+
+        if len(api_name_dict.keys()) > 0:
+            with open("../api_config_internal.py", "w+") as py_file:
+                py_file.write("from base.api_type import APIType\n")
+                py_file.write("from base.base_func import InterfaceConfig\n")
+
+                py_file.write("\n\nclass APINameList(object):\n")
+                for api in api_name_dict.keys():
+                    py_file.write("    " + api + api_suffix + " = " + "'" + api + "'" + "\n")
+
+                py_file.write("\n\nclass APIConfig:\n")
+                for api in api_name_dict.keys():
+                    py_file.write("    " + api + api_suffix + " = " + api_name_dict[api] + "\n")
+
+            if api_suffix:
+                api_suffix = "_" + api_suffix.lower()
+
+            if api_list_name:
+                with open("../api_service.py", "w+") as py_file:
+                    py_file.write("class APIService(BaseService, FuncService):\n\n")
+                    indent = "    "
+                    for api in api_name_dict.keys():
+                        py_file.write(indent + "@classmethod\n")
+                        py_file.write(
+                            indent + "def " + cls.get_api_name(api) + api_suffix + "(cls, request_body=None):\n")
+                        py_file.write(
+                            indent * 2 + "request_body = " + api + "Request" + ".get_default_body() if request_body is None else request_body\n")
+                        py_file.write(indent * 2 + "api_name = " + api_list_name + "." + api + "\n")
+                        py_file.write(
+                            indent * 2 + "ret, res = cls.call_api(api_name=api_name, request_body=request_body)\n")
+                        py_file.write(indent * 2 + "return ret, res\n\n")
+
+        else:
+            print("No api is found in pb")
+
+    @classmethod
+    def get_api_name(cls, api_name):
+        new_name = [api_name[0]]
+
+        # AlertNewDBAddME->alert_new_db_add_me
+        continuous_upper_letter_count = 0
+
+        api_name_len = len(api_name)
+
+        for index in range(1, len(api_name)):
+            letter = api_name[index]
+
+            if letter.islower():
+                continuous_upper_letter_count = 0
+                new_name.append(letter)
+            else:
+                continuous_upper_letter_count += 1
+                if continuous_upper_letter_count == 1:
+                    new_name.append("_" + letter)
+
+                elif continuous_upper_letter_count > 1 and index + 1 < api_name_len and api_name[index + 1].islower():
+                    new_name.append("_" + letter)
+                else:
+                    new_name.append(letter)
+
+        return ''.join(new_name).lower()
+
+    """
+        Convert pb(.proto) to python request response class
+        file_name: proto file absolute path
+    """
+
+    @classmethod
+    def pb2py(cls, file_name):
+        if not os.path.isfile(file_name) or not file_name.endswith(".proto"):
+            print("Invalid file " + str(file_name))
+
+        class_name_list = []
+        line = "test"
+
+        with open("pb.py", "w+") as py_file:
+            py_file.write("from common_service.base_request import Message, BaseRequest, BaseResponse\n")
+            with open(file_name, "r") as pb:
+
+                while line:
+                    line = pb.readline()
+
+                    # class found in pb
+                    is_enum = line.startswith("enum ")
+                    is_message = line.startswith("message ")
+
+                    if not is_enum and not is_message:
+                        continue
+
+                    class_name = line.split(" ")[1]
+                    class_name = class_name.replace("{", "").replace("\n", "")
+                    class_name_list.append(class_name)
+                    class_type = "Message"
+
+                    if "Request {" in line or "Request{" in line:
+                        class_type = "BaseRequest"
+
+                    if "Response {" in line or "Response{" in line:
+                        class_type = "BaseResponse"
+
+                    # write class name
+                    value = 2 * "\n" + "class " + class_name + "(" + class_type + ")" + ":\n"
+                    py_file.write(value)
+                    py_file.flush()
+                    strip_line = pb.readline().strip()
+
+                    if strip_line.endswith("}"):
+                        py_file.write(4 * " " + "pass\n")
+                        continue
+
+                    get_request_str = ["\n" + 4 * " " + "def get_request(self):\n", 8 * " " + "return {\n"]
+
+                    # end of class mark definition is }
+                    while not strip_line.endswith("}") and line:
+                        if strip_line.startswith("//") or not strip_line:
+                            strip_line = pb.readline().strip()
+                            continue
+
+                        content = " " * 4 + strip_line.replace(";", "") + "\n"
+
+                        if not is_enum:
+                            split_list = strip_line.split(" ")
+
+                            if "repeated" == split_list[0]:
+                                para_type = "repeated " + split_list[1]
+                                para_name = split_list[2]
+                                para_cmt = split_list[3:]
+                            else:
+                                para_type = split_list[0]
+                                para_name = split_list[1]
+                                para_cmt = split_list[2:]
+
+                            equator_index = para_name.find("=")
+                            if equator_index != -1:
+                                para_name = para_name[0:equator_index]
+
+                            content = " " * 4 + para_name + " = \"" + para_name + "\"" + "  # " + para_type + " "
+                            for cmt in para_cmt:
+                                if cmt != "=":
+                                    content += cmt.replace(";", "")
+                            content += "\n"
+
+                            get_request_str.append(12 * " " + "self." + str(para_name) + ": {\n")
+                            get_request_str.append(16 * " " + "# " + para_type + "\n")
+                            get_request_str.append(16 * " " + "'valid': '',\n")
+                            get_request_str.append(16 * " " + "'invalid': ''\n")
+                            get_request_str.append(12 * " " + "},\n")
+
+                        py_file.write(content)
+                        strip_line = pb.readline().strip()
+                        print(strip_line)
+
+                    get_request_str.append(8 * " " + "}\n")
+
+                    if len(get_request_str) > 3:
+                        for content in get_request_str:
+                            py_file.write(content)
+
 
 class ConfigParser:
 
@@ -366,4 +415,5 @@ class ConfigParser:
 
 
 if __name__ == '__main__':
-    Util.pb_to_interface_config("/Users/mayi/Project/PyAPITesting/x.proto")
+    Util.pb_to_interface_config("/Users/x.proto", api_suffix="", interface_type=APIType.public,
+                                api_list_name="APINameList")

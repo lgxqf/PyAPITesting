@@ -188,6 +188,33 @@ class Util:
         dir_index = cwd.rindex(project_root)
         return cwd[: dir_index + len(project_root)]
 
+    @classmethod
+    def get_api_name(cls, api_name):
+        new_name = [api_name[0]]
+
+        # AlertNewDBAddME->alert_new_db_add_me
+        continuous_upper_letter_count = 0
+
+        api_name_len = len(api_name)
+
+        for index in range(1, len(api_name)):
+            letter = api_name[index]
+
+            if letter.islower():
+                continuous_upper_letter_count = 0
+                new_name.append(letter)
+            else:
+                continuous_upper_letter_count += 1
+                if continuous_upper_letter_count == 1:
+                    new_name.append("_" + letter)
+
+                elif continuous_upper_letter_count > 1 and index + 1 < api_name_len and api_name[index + 1].islower():
+                    new_name.append("_" + letter)
+                else:
+                    new_name.append(letter)
+
+        return ''.join(new_name).lower()
+
     """
         Convert pb(.proto) to interface config file
         file_name: proto file absolute path
@@ -299,33 +326,6 @@ class Util:
 
         else:
             print("No api is found in pb")
-
-    @classmethod
-    def get_api_name(cls, api_name):
-        new_name = [api_name[0]]
-
-        # AlertNewDBAddME->alert_new_db_add_me
-        continuous_upper_letter_count = 0
-
-        api_name_len = len(api_name)
-
-        for index in range(1, len(api_name)):
-            letter = api_name[index]
-
-            if letter.islower():
-                continuous_upper_letter_count = 0
-                new_name.append(letter)
-            else:
-                continuous_upper_letter_count += 1
-                if continuous_upper_letter_count == 1:
-                    new_name.append("_" + letter)
-
-                elif continuous_upper_letter_count > 1 and index + 1 < api_name_len and api_name[index + 1].islower():
-                    new_name.append("_" + letter)
-                else:
-                    new_name.append(letter)
-
-        return ''.join(new_name).lower()
 
     """
         Convert pb(.proto) to python request response class

@@ -17,9 +17,13 @@ def test_auth_success(host, log=None):
     BaseService.log = log
     BaseService.host = host
     service = APIService()
-    account = "adminX"
-    password = "admin_pwd"
-    ret, res = service.authorization(account, password)
+    account = "admin"
+    password = "admin123"
+    request_body = {
+        "account": account,
+        "password": password
+    }
+    ret, res = service.authorization(request_body)
 
     return ret, res
 

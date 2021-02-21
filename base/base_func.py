@@ -139,17 +139,15 @@ class BaseService(object):
         return _api
 
     @classmethod
-    def call_api(cls, req_class, res_class,api_config_class, api_name, env,request_body=None, status_success=200):
+    def call_api(cls, req_class, res_class, api_config_class, api_name, env, request_body=None, status_success=200):
         if request_body is None:
             request_body = {}
 
         inter_config = getattr(api_config_class(), api_name, None)
-        # req_class = globals()[api_name + 'Request']
-        # res_class = globals()[api_name + 'Response']
         request_body = request_body or req_class.get_default_body()
 
         res, cls.status_code = cls.api_request(host=cls.host, body=request_body, token=cls.token,
-                                               interface_config=inter_config,env=env)
+                                               interface_config=inter_config, env=env)
 
         if cls.status_code == status_success and BaseResponse.check_schema(res, res_class):
             return True, res
@@ -300,7 +298,7 @@ class BaseService(object):
 
 
 class InterfaceConfig(object):
-    def __init__(self, interface_info, interface_type=APIType.internal, token_required=True, protocol='http'):
+    def __init__(self, interface_info, interface_type=APIType.internal, token_required=True, protocol='https'):
         self.interface_const = interface_info
         self.interface_type = interface_type
         self.token_required = token_required
@@ -308,7 +306,7 @@ class InterfaceConfig(object):
 
 
 class WrapperApi:
-    def __init__(self, host, uri, method, body=None, log=None, log_msg_flag=False, timeout=120, protocol='http',
+    def __init__(self, host, uri, method, body=None, log=None, log_msg_flag=False, timeout=120, protocol='https',
                  headers=None, params=None, verify=False, files=None, data=None):
         self.host = host
         self.uri = uri
@@ -318,7 +316,7 @@ class WrapperApi:
         self.params = {} if params is None else params
         self.timeout = timeout
         self.protocol = protocol
-        if host.split(':')[-1] == '30443':
+        if host.split(':')[-1] == '443':
             self.protocol = 'https'
         self.headers = {} if headers is None else headers
         s.verify = verify

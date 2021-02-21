@@ -65,7 +65,7 @@ service ExamplePublic {
 
     rpc Authorization(AuthorizationRequest) returns (AuthorizationResponse) {
       option (google.api.http) = {
-        post: "/v1/authorization"
+        post: "/v1/authorization_internal"
         body: "*"
       };
     }

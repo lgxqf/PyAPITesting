@@ -4,9 +4,10 @@ project_root = 'PyAPITesting'
 remote_port = 22
 
 HOST = {"host": "0.0.0.0"}
+HOST = {"host": "172.20.25.106"}
 
-test_env = {
-    "0.0.0.0": {
-        APIType.public: ":30020",
+TEST_ENV = {
+    "172.20.25.106": {
+        APIType.public: ":30443",
         APIType.internal: ":30999/api"},
 }

@@ -76,9 +76,11 @@ def get_project_path(cls, dir_name=None):
     dir_index = cwd.rindex(root_name)
     return cwd[: dir_index + len(root_name)] + os.sep + dir_name
 
+
 def create_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
+
 
 class ConfigParser:
 
@@ -200,7 +202,8 @@ class Util:
     """
 
     @classmethod
-    def pb_to_interface_config(cls, file_name, output_dir, api_suffix="", interface_type=APIType.public, api_list_name=None):
+    def pb_to_interface_config(cls, file_name, output_dir, api_suffix="", interface_type=APIType.public,
+                               api_list_name=None, protocol="https"):
         if not os.path.isfile(file_name) or not file_name.endswith(".proto"):
             print("Invalid file " + str(file_name))
 
@@ -233,9 +236,7 @@ class Util:
                     print(api)
 
                 if api_name_found:
-                    # 根据http method和 uir 拼接interface config
-                    # get: "/v1/verify_token"
-                    # VerifyToken = InterfaceConfig({'method':'POST:','uri':' "/v1/authorization_internal"'}, interface_type=APIType.internal)
+                    # 根据http method和uri 拼接interface config
                     for method in http_method_list:
                         if -1 != line.find(method + ":"):
                             uri = line.split(":")[1].replace("\n", "")
@@ -245,6 +246,7 @@ class Util:
                                 interface_str += ", interface_type=APIType.internal"
                             if interface_type == APIType.public:
                                 interface_str += ", interface_type=APIType.public"
+                            interface_str += ", protocol=" + "\"" + protocol + "\""
                             interface_str += ")"
                             api_name_found = False
                             api_name_dict[api] = interface_str
@@ -269,12 +271,21 @@ class Util:
             if api_list_name:
                 with open(output_dir + os.sep + "api_service.py", "w+") as py_file:
                     py_file.write("from base.base_func import BaseService\n")
-                    py_file.write("from .api_config import APINameList\n")
-                    py_file.write("# Keep this, or [api_name + 'Request'] class wil not be found in globals()\n")
-                    py_file.write("from .request_response import *\n\n\n")
+                    py_file.write("from .api_config import APINameList, APIConfig\n")
+                    py_file.write("from settings import TEST_ENV\n")
+                    py_file.write(
+                        "from .request_response import *  # Keep this, or [api_name + 'Request'] class wil not be found in globals()\n\n\n")
 
                     py_file.write("class APIService(BaseService):\n\n")
                     indent = "    "
+
+                    py_file.write(indent + "@classmethod\n")
+                    py_file.write(
+                        indent + "def call_api(cls, api_name=None, request_body=None, status_success=200, api_config_class=APIConfig, req_class=None, res_class=None):\n")
+
+                    py_file.write(
+                        indent * 2 + "return super().call_api(req_class=globals()[api_name + 'Request'], res_class=globals()[api_name + 'Response'], api_config_class=api_config_class, env=TEST_ENV, api_name=api_name, request_body=request_body, status_success=status_success)\n\n")
+
                     for api in api_name_dict.keys():
                         py_file.write(indent + "@classmethod\n")
                         py_file.write(
@@ -413,13 +424,15 @@ class Util:
                             py_file.write(content)
 
     @classmethod
-    def pb2py(cls, file_name, output_dir="./services", api_suffix="", interface_type=APIType.public, api_list_name=None):
+    def pb2py(cls, file_name, output_dir="./services", api_suffix="", interface_type=APIType.public,
+              api_list_name=None):
         create_dir(output_dir)
-        cls.pb_to_request_response(file_name=file_name,output_dir=output_dir)
-        cls.pb_to_interface_config(file_name=file_name,output_dir=output_dir, api_suffix=api_suffix,
-                                   interface_type=interface_type, api_list_name=api_list_name)
+        cls.pb_to_request_response(file_name=file_name, output_dir=output_dir)
+        cls.pb_to_interface_config(file_name=file_name, output_dir=output_dir, api_suffix=api_suffix,
+                                   interface_type=interface_type, api_list_name=api_list_name, protocol="https")
 
 
 if __name__ == '__main__':
     file = "/Users/mayi/Project/PyAPITesting/project/example/pb.proto"
-    Util.pb2py(file, output_dir="services", api_suffix="", interface_type=APIType.public, api_list_name="APINameList")
+    Util.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
+               api_list_name="APINameList")

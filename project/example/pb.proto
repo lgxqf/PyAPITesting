@@ -1,0 +1,79 @@
+syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "github.com/mwitkow/go-proto-validators/validator.proto";
+
+package example.project;
+
+message AuthorizationRequest {
+  string account = 1 [(validator.field) = {regex:"^[a-zA-Z0-9_\\-\\.]+$", length_gt: 3, length_lt: 21}];
+  string password = 2 [(validator.field) = {regex:"^[a-zA-Z0-9]+$",length_gt: 5, length_lt: 19}];
+}
+
+message AuthorizationResponse {
+  string token = 1;
+}
+
+enum Personnel {
+  PERSONNEL_LEVEL_UNKNOWN = 0;
+  PERSONNEL_LEVEL_RED = 1;
+  PERSONNEL_LEVEL_ORANGE = 2;
+  PERSONNEL_LEVEL_YELLOW = 3;
+
+}
+
+enum Status {
+  STATUS_SEND = 0;
+  STATUS_UNSEND = 1;
+}
+
+message Result {
+  string key = 1;
+  float score = 2;
+  string personnel_kind = 3;
+  bool is_hit = 4;
+}
+
+message CompareRequest {
+  string device_id = 1 [(validator.field) = {regex:"^[0-9]+$", length_eq: 20}];
+  google.protobuf.Timestamp captured_time = 2;
+  bytes image = 3;
+  string image_id = 4;
+  bytes liveness_image = 5;
+  string image_url = 6;
+  string face_id = 7;
+  Personnel personnel = 8;
+  Status status = 9;
+}
+
+message CompareResponse {
+  string image_id = 1 [(validator.field) = {length_lt: 256}];
+  repeated Result result = 2;
+}
+
+message Info {
+  string track_id = 1;
+  string device_id = 2;
+  string entity_id = 3;
+  google.protobuf.Timestamp captured_time = 4;
+  string image_url = 5;
+}
+
+
+service ExamplePublic {
+
+    rpc Authorization(AuthorizationRequest) returns (AuthorizationResponse) {
+      option (google.api.http) = {
+        post: "/v1/authorization"
+        body: "*"
+      };
+    }
+
+    rpc Compare(CompareRequest) returns (CompareResponse) {
+      option (google.api.http) = {
+        post: "/v1/compares/{image_id}"
+        body: "*"
+      };
+    }
+}

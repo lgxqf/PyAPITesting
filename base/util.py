@@ -5,7 +5,6 @@ import string
 import time
 
 from random import sample
-
 from base.api_type import APIType
 from settings import project_root
 from logging.handlers import RotatingFileHandler
@@ -76,6 +75,55 @@ def get_project_path(cls, dir_name=None):
     root_name = project_root
     dir_index = cwd.rindex(root_name)
     return cwd[: dir_index + len(root_name)] + os.sep + dir_name
+
+def create_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+class ConfigParser:
+
+    @staticmethod
+    def get_config_parser():
+        """
+        实例化一个ConfigParser
+        :return:
+        """
+        config = configparser.ConfigParser()
+        return config
+
+    @staticmethod
+    def get_default_params(options, project='gateway'):
+        """
+        获取配置文件信息
+        :param options:
+        :param project:
+        :return:
+        """
+        config = ConfigParser.get_config_parser()
+        section = 'section = "DefaultParams"'
+
+        config.read(os.path.dirname(os.path.dirname(__file__)) + os.sep + 'config.ini')
+        if options in config.options(section):
+            return config[section][options]
+
+    @staticmethod
+    def set_default_params(options, value, project='gateway'):
+        """
+        编辑配置文件
+        :param options: 要编辑的key
+        :param value:
+        :param project:
+        :return:
+        """
+        config = ConfigParser.get_config_parser()
+
+        section = 'DefaultParams'
+
+        file_path = os.path.dirname(os.path.dirname(__file__)) + os.sep + 'config.ini'
+        config.read(file_path)
+        config.set(section, options, value)
+        with open(file_path, "w") as f:
+            config.write(f)
 
 
 class Util:
@@ -152,7 +200,7 @@ class Util:
     """
 
     @classmethod
-    def pb_to_interface_config(cls, file_name, api_suffix="", interface_type=APIType.public, api_list_name=None):
+    def pb_to_interface_config(cls, file_name, output_dir, api_suffix="", interface_type=APIType.public, api_list_name=None):
         if not os.path.isfile(file_name) or not file_name.endswith(".proto"):
             print("Invalid file " + str(file_name))
 
@@ -203,7 +251,7 @@ class Util:
                             break
 
         if len(api_name_dict.keys()) > 0:
-            with open("../api_config_internal.py", "w+") as py_file:
+            with open(output_dir + os.sep + "api_config.py", "w+") as py_file:
                 py_file.write("from base.api_type import APIType\n")
                 py_file.write("from base.base_func import InterfaceConfig\n")
 
@@ -219,8 +267,13 @@ class Util:
                 api_suffix = "_" + api_suffix.lower()
 
             if api_list_name:
-                with open("../api_service.py", "w+") as py_file:
-                    py_file.write("class APIService(BaseService, FuncService):\n\n")
+                with open(output_dir + os.sep + "api_service.py", "w+") as py_file:
+                    py_file.write("from base.base_func import BaseService\n")
+                    py_file.write("from .api_config import APINameList\n")
+                    py_file.write("# Keep this, or [api_name + 'Request'] class wil not be found in globals()\n")
+                    py_file.write("from .request_response import *\n\n\n")
+
+                    py_file.write("class APIService(BaseService):\n\n")
                     indent = "    "
                     for api in api_name_dict.keys():
                         py_file.write(indent + "@classmethod\n")
@@ -269,15 +322,15 @@ class Util:
     """
 
     @classmethod
-    def pb2py(cls, file_name):
+    def pb_to_request_response(cls, file_name, output_dir):
         if not os.path.isfile(file_name) or not file_name.endswith(".proto"):
             print("Invalid file " + str(file_name))
 
         class_name_list = []
         line = "test"
 
-        with open("pb.py", "w+") as py_file:
-            py_file.write("from common_service.base_request import Message, BaseRequest, BaseResponse\n")
+        with open(output_dir + os.sep + "request_response.py", "w+") as py_file:
+            py_file.write("from base.base_request import Message, BaseRequest, BaseResponse\n")
             with open(file_name, "r") as pb:
 
                 while line:
@@ -359,61 +412,14 @@ class Util:
                         for content in get_request_str:
                             py_file.write(content)
 
-
-class ConfigParser:
-
-    @staticmethod
-    def get_config_parser():
-        """
-        实例化一个ConfigParser
-        :return:
-        """
-        config = configparser.ConfigParser()
-        return config
-
-    @staticmethod
-    def get_default_params(options, project='gateway'):
-        """
-        获取配置文件信息
-        :param options:
-        :param project:
-        :return:
-        """
-        config = ConfigParser.get_config_parser()
-
-        section = ''
-        if project == "gateway":
-            section = "DefaultParams"
-        elif project == "tianshu":
-            section = "DefaultParamsTS"
-        config.read(os.path.dirname(os.path.dirname(__file__)) + os.sep + 'config.ini')
-        if options in config.options(section):
-            return config[section][options]
-
-    @staticmethod
-    def set_default_params(options, value, project='gateway'):
-        """
-        编辑配置文件
-        :param options: 要编辑的key
-        :param value:
-        :param project:
-        :return:
-        """
-        config = ConfigParser.get_config_parser()
-
-        section = ''
-        if project == "gateway":
-            section = "DefaultParams"
-        elif project == "tianshu":
-            section = "DefaultParamsTS"
-
-        file_path = os.path.dirname(os.path.dirname(__file__)) + os.sep + 'config.ini'
-        config.read(file_path)
-        config.set(section, options, value)
-        with open(file_path, "w") as f:
-            config.write(f)
+    @classmethod
+    def pb2py(cls, file_name, output_dir="./services", api_suffix="", interface_type=APIType.public, api_list_name=None):
+        create_dir(output_dir)
+        cls.pb_to_request_response(file_name=file_name,output_dir=output_dir)
+        cls.pb_to_interface_config(file_name=file_name,output_dir=output_dir, api_suffix=api_suffix,
+                                   interface_type=interface_type, api_list_name=api_list_name)
 
 
 if __name__ == '__main__':
-    Util.pb_to_interface_config("/Users/x.proto", api_suffix="", interface_type=APIType.public,
-                                api_list_name="APINameList")
+    file = "/Users/mayi/Project/PyAPITesting/project/example/pb.proto"
+    Util.pb2py(file, output_dir="services", api_suffix="", interface_type=APIType.public, api_list_name="APINameList")

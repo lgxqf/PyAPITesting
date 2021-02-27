@@ -1,11 +1,13 @@
 ## 基于Python的接口自动化测试框架，简单、易用
 
 ## 主要功能
+
 ### 根据Protobuf(.proto)文件直接生成Python测试接口， 生成内容包括 
     - request和response类 request_response.py
     - 接口的调用方法 api_service.py
     - 接口的字符列表 api_config.py
-### 自动生成response对应的json schema       
+
+### 自动生成response对应的json schema 对返回类型做检查
 
 
 ## 要求

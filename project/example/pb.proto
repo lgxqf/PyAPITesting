@@ -15,6 +15,13 @@ message AuthorizationResponse {
   string token = 1;
 }
 
+message EmptyRequest {
+}
+
+message EmptyResponse {
+}
+
+
 enum Personnel {
   PERSONNEL_LEVEL_UNKNOWN = 0;
   PERSONNEL_LEVEL_RED = 1;
@@ -45,6 +52,7 @@ message CompareRequest {
   string face_id = 7;
   Personnel personnel = 8;
   Status status = 9;
+  repeated string name = 10;
 }
 
 message CompareResponse {

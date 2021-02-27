@@ -23,3 +23,4 @@ class APIService(BaseService):
         api_name = APINameList.Compare
         ret, res = cls.call_api(api_name=api_name, request_body=request_body)
         return ret, res
+

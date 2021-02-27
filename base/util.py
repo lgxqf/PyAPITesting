@@ -342,6 +342,9 @@ class Util:
 
         with open(output_dir + os.sep + "request_response.py", "w+") as py_file:
             py_file.write("from base.base_request import Message, BaseRequest, BaseResponse\n")
+            pb_type_list = ["bool", "string", "bytes", "double", "float", "int32", "int64", "uint32",
+                            "uint64", "sint32", "sint64", "fixed32", "fixed64", "sfixed32", "sfixed64"]
+
             with open(file_name, "r") as pb:
 
                 while line:
@@ -371,29 +374,41 @@ class Util:
                     py_file.flush()
                     strip_line = pb.readline().strip()
 
+                    # Empty response class: XXXResponse{}
                     if strip_line.endswith("}"):
                         py_file.write(4 * " " + "pass\n")
                         continue
 
-                    get_request_str = ["\n" + 4 * " " + "def get_request(self):\n", 8 * " " + "return {\n"]
+                    class_body = []
 
-                    # end of class mark definition is }
+                    if class_type == "BaseRequest":
+                        class_body = ["\n" + 4 * " " + "def get_request(self):\n", 8 * " " + "return {\n"]
+
+                    if class_type == "BaseResponse":
+                        class_body.append(4 * " " + "schema = {\n")
+                        class_body.append(8 * " " + "\"type\": \"object\",\n")
+                        class_body.append(8 * " " + "\"properties\": {\n")
+
+                    # find the end of class definition: }
                     while not strip_line.endswith("}") and line:
                         if strip_line.startswith("//") or not strip_line:
                             strip_line = pb.readline().strip()
                             continue
 
-                        content = " " * 4 + strip_line.replace(";", "") + "\n"
+                        class_field = " " * 4 + strip_line.replace(";", "") + "\n"
 
-                        # Type is message(Request or Response)
                         if not is_enum:
                             split_list = strip_line.split(" ")
+                            is_ary = False
 
                             if "repeated" == split_list[0]:
-                                para_type = "repeated " + split_list[1]
+                                is_ary = True
+                                para_filed_annotation = "repeated " + split_list[1]
+                                para_type = split_list[1]
                                 para_name = split_list[2]
                                 para_cmt = split_list[3:]
                             else:
+                                para_filed_annotation = split_list[0]
                                 para_type = split_list[0]
                                 para_name = split_list[1]
                                 para_cmt = split_list[2:]
@@ -402,27 +417,64 @@ class Util:
                             if equator_index != -1:
                                 para_name = para_name[0:equator_index]
 
-                            content = " " * 4 + para_name + " = \"" + para_name + "\"" + "  # " + para_type + " "
+                            class_field = " " * 4 + para_name + " = \"" + para_name + "\"" + "  # " + para_filed_annotation + " "
                             for cmt in para_cmt:
                                 if cmt != "=":
-                                    content += cmt.replace(";", "")
-                            content += "\n"
+                                    class_field += " " + cmt.replace(";", "")
+                            class_field += "\n"
 
-                            get_request_str.append(12 * " " + "self." + str(para_name) + ": {\n")
-                            get_request_str.append(16 * " " + "# " + para_type + "\n")
-                            get_request_str.append(16 * " " + "'valid': '',\n")
-                            get_request_str.append(16 * " " + "'invalid': ''\n")
-                            get_request_str.append(12 * " " + "},\n")
+                            if class_type == "BaseRequest":
+                                class_body.append(12 * " " + "self." + str(para_name) + ": {\n")
+                                class_body.append(16 * " " + "# " + para_filed_annotation + "\n")
+                                if not is_ary:
+                                    class_body.append(16 * " " + "'valid': '',\n")
+                                else:
+                                    class_body.append(16 * " " + "'valid': [],\n")
+                                class_body.append(16 * " " + "'invalid': ''\n")
+                                class_body.append(12 * " " + "},\n")
 
-                        py_file.write(content)
+                            if class_type == "BaseResponse":
+                                class_body.append(12 * " " + "\"" + para_name + "\": {\n")
+                                schema_type = para_type
+
+                                if not (para_type in pb_type_list):
+                                    schema_type = "object"
+
+                                if is_ary:
+                                    schema_type = "array"
+
+                                class_body.append(16 * " " + "\"type\": \"" + schema_type + "\",\n")
+
+                                if is_ary:
+                                    class_body.append(16 * " " + "\"items\": [\n")
+                                    class_body.append(20 * " " + "{\n")
+                                    class_body.append(24 * " " + "\"type\": \"object\"," + "  # " + para_type + "\n")
+                                    class_body.append(20 * " " + "},\n")
+                                    class_body.append(16 * " " + "]\n")
+
+                                class_body.append(12 * " " + "},\n")
+
+                        # "type": "array",
+                        # "items": [
+                        #     {
+                        #         "type": "string",
+                        #         "minLength": 5
+                        #     },
+
+                        # write class filed
+                        py_file.write(class_field)
                         strip_line = pb.readline().strip()
-                        print(strip_line)
 
-                    get_request_str.append(8 * " " + "}\n")
+                    # add "}" for class body
+                    if class_type == "BaseRequest" or class_type == "BaseResponse":
+                        class_body.append(8 * " " + "}\n")
 
-                    if len(get_request_str) > 3:
-                        for content in get_request_str:
-                            py_file.write(content)
+                    if class_type == "BaseResponse":
+                        class_body.append(4 * " " + "}\n")
+
+                    # if len(class_body) > 3:
+                    for class_field in class_body:
+                        py_file.write(class_field)
 
     @classmethod
     def pb2py(cls, file_name, output_dir="./services", api_suffix="", interface_type=APIType.public,
@@ -432,15 +484,8 @@ class Util:
         cls.pb_to_interface_config(file_name=file_name, output_dir=output_dir, api_suffix=api_suffix,
                                    interface_type=interface_type, api_list_name=api_list_name, protocol="https")
 
-    @classmethod
-    def generate_response_schema(cls, resp):
-        pb_type_list = ["bool", "string", "bytes", "double", "float", "repeated", "int32", "int64", "uint32", "uint64",
-                     "sint32", "sint64", "fixed32", "fixed64", "sfixed32", "sfixed64", ]
-
-        return ""
-
 
 if __name__ == '__main__':
-    file = "/Users/mayi/Project/PyAPITesting/project/example/pb.proto"
+    file = "/Users/justin/Project/MYProject/PyAPITesting/project/example/pb.proto"
     Util.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
                api_list_name="APINameList")

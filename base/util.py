@@ -387,6 +387,7 @@ class Util:
                     if class_type == "BaseResponse":
                         class_body.append(4 * " " + "schema = {\n")
                         class_body.append(8 * " " + "\"type\": \"object\",\n")
+                        class_body.append(8 * " " + "\"required\": [],  # write the fields must be in response\n")
                         class_body.append(8 * " " + "\"properties\": {\n")
 
                     # find the end of class definition: }

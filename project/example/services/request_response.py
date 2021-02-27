@@ -24,6 +24,7 @@ class AuthorizationResponse(BaseResponse):
     token = "token"  # string  1
     schema = {
         "type": "object",
+        "required": [],  # write the fields must be in response
         "properties": {
             "token": {
                 "type": "string",
@@ -131,6 +132,7 @@ class CompareResponse(BaseResponse):
     result = "result"  # repeated Result  2
     schema = {
         "type": "object",
+        "required": [],  # write the fields must be in response
         "properties": {
             "image_id": {
                 "type": "string",

@@ -385,6 +385,7 @@ class Util:
 
                         content = " " * 4 + strip_line.replace(";", "") + "\n"
 
+                        # Type is message(Request or Response)
                         if not is_enum:
                             split_list = strip_line.split(" ")
 
@@ -430,6 +431,13 @@ class Util:
         cls.pb_to_request_response(file_name=file_name, output_dir=output_dir)
         cls.pb_to_interface_config(file_name=file_name, output_dir=output_dir, api_suffix=api_suffix,
                                    interface_type=interface_type, api_list_name=api_list_name, protocol="https")
+
+    @classmethod
+    def generate_response_schema(cls, resp):
+        pb_type_list = ["bool", "string", "bytes", "double", "float", "repeated", "int32", "int64", "uint32", "uint64",
+                     "sint32", "sint64", "fixed32", "fixed64", "sfixed32", "sfixed64", ]
+
+        return ""
 
 
 if __name__ == '__main__':

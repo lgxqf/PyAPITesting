@@ -2,13 +2,15 @@
 
 ## 主要功能
 
-### 根据Protobuf(.proto)文件直接生成Python测试接口， 生成内容包括 
-    - request和response类 request_response.py
-    - 接口的调用方法 api_service.py
-    - 接口的字符列表 api_config.py
+### 根据Proto文件直接生成Python测试接口， 生成内容包括 
+* 接口对应的request和response类 request_response.py
+* 接口的调用方法 api_service.py
+* 接口的名字列表 api_config.py
 
-### 自动生成response对应的json schema 对返回类型做检查
-
+### 自动对Response做检验
+* 根据pb定义 校验各字段的类型
+* 针对数值字段 如果pb中定义了validator 则根据validator生成检验规则， 如：
+  - int32 limit = 3 [(validator.field) = {int_gt: 0, int_lt: 10000}];
 
 ## 要求
 - Protobuf中定义的request必须名字以Request结尾: XXXRequest

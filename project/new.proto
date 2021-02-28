@@ -1,0 +1,9 @@
+message CrowdRealtimeAnalysisConfig {
+
+  message RealtimeAnalysisOutputConfig {
+    bool enable = 1;
+    int32 min_interval = 2;
+  }
+
+  bool density_map_config = 3;
+}

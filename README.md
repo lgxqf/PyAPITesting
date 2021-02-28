@@ -13,16 +13,19 @@
   - int32 limit = 3 [(validator.field) = {int_gt: 0, int_lt: 10000}];
 
 ## 要求
+- 仅支持Protobuf3
 - Protobuf中定义的request必须名字以Request结尾: XXXRequest
 - Protobuf中定义的response必须名字以Response结尾: XXXResponse
 
 ## TODO
 -  分析 validator[(validator.field) = {length_gt: 0}];
    [(validator.field) = {int_gt: 0, int_lt: 10000}];
-   
+- 支持 pb Oneof关键字分析   
 - 测试 EntityListRequest
+- 支持分析嵌套Message
 
 ## 参考文档
 - http://json-schema.org/
 - JSON Schema入门 https://www.jianshu.com/p/1711f2f24dcf?utm_campaign=hugo
+- Golang ProtoBuf Validator Compiler https://github.com/mwitkow/go-proto-validators/
 

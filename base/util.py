@@ -403,6 +403,9 @@ class Util:
                             split_list = strip_line.split(" ")
                             is_ary = False
 
+                            if "reserved" == split_list[0]:
+                                continue
+
                             if "repeated" == split_list[0]:
                                 is_ary = True
                                 para_filed_annotation = "repeated " + split_list[1]

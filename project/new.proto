@@ -6,4 +6,5 @@ message CrowdRealtimeAnalysisConfig {
   }
 
   bool density_map_config = 3;
+  RealtimeAnalysisOutputConfig roi = 4;
 }

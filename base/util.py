@@ -333,7 +333,215 @@ class Util:
     """
 
     @classmethod
-    def pb_to_request_response(cls, file_name, output_dir):
+    def pb_to_request_response(cls, file_name, output_dir, is_class_separated=False):
+        if not os.path.isfile(file_name) or not file_name.endswith(".proto"):
+            print("Invalid file " + str(file_name))
+            return
+
+        with open(file_name, "r") as pb:
+            pb_content = pb.readlines()
+
+        # file header
+        file_header = ["# -*- coding: utf-8 -*-\n",
+                       "from base.base_request import Message, BaseRequest, BaseResponse\n"]
+
+        # get classes from pb
+        blob_list = cls.get_blob_list(pb_content)
+        class_content = []
+        for py_class_list in cls.get_class_from_pb(blob_list):
+            for py_class in py_class_list:
+                class_content.append(py_class)
+
+        # write python classes to file
+        file_content = file_header + class_content
+        if not is_class_separated:
+            with open(output_dir + os.sep + "request_response.py", "w+") as py_file:
+                for line in file_content:
+                    py_file.write(line)
+        else:
+            # write python class to different files
+            pass
+
+    @classmethod
+    def get_blob_list(cls, pb_content):
+        # support embedded message
+        blob_list = []
+        index = 0
+        length = len(pb_content)
+
+        # separate pb into blobs by keywords enum/message
+        while index < length:
+            line = str(pb_content[index])
+            index += 1
+
+            if not line.lstrip().startswith("enum ") and not line.lstrip().startswith("message "):
+                continue
+
+            blob_content = []
+            blob_end_found = False
+            flag_tag_count = 0
+
+            # find last line of blob
+            while line and not blob_end_found and index < length:
+
+                if line.endswith("{\n"):
+                    flag_tag_count += 1
+
+                if line.endswith("}\n"):
+                    flag_tag_count -= 1
+
+                if flag_tag_count == 0:
+                    blob_end_found = True
+
+                blob_content.append(line)
+
+                if not blob_end_found:
+                    line = pb_content[index]
+                    index += 1
+
+                if line.lstrip().startswith("enum ") or line.lstrip().startswith("message "):
+                    content, skip_index = cls.get_blob_list(pb_content[index-1:])
+                    blob_list.append(content)
+                    index += skip_index - 1
+                    print("embedded class found")
+
+            # add blob to blob_list
+            blob_list.append(blob_content)
+            print(blob_content)
+            print(index)
+        return blob_list, index
+
+    @classmethod
+    def get_class_from_pb(cls, pb_blob):
+        pb_type_list = ["bool", "string", "bytes", "double", "float", "int32", "int64", "uint32",
+                        "uint64", "sint32", "sint64", "fixed32", "fixed64", "sfixed32", "sfixed64"]
+
+        blob_list = cls.get_blob_list(pb_blob)
+
+        class_content = []
+        return class_content
+        # class_name = line.split(" ")[1]
+        # class_name = class_name.replace("{", "").replace("\n", "")
+        # class_name_list.append(class_name)
+        # class_type = "Message"
+        #
+        # if "Request {" in line or "Request{" in line:
+        #     class_type = "BaseRequest"
+        #
+        # if "Response {" in line or "Response{" in line:
+        #     class_type = "BaseResponse"
+        #
+        # # write class name
+        # value = 2 * "\n" + "class " + class_name + "(" + class_type + ")" + ":\n"
+        # py_file.write(value)
+        # py_file.flush()
+        # strip_line = pb.readline().strip()
+        #
+        # # deal with empty response class: XXXResponse{}
+        # if strip_line.endswith("}"):
+        #     py_file.write(4 * " " + "pass\n")
+        #     continue
+        #
+        # class_body = []
+        #
+        # if class_type == "BaseRequest":
+        #     class_body = ["\n" + 4 * " " + "def get_request(self):\n", 8 * " " + "return {\n"]
+        #
+        # if class_type == "BaseResponse":
+        #     class_body.append(4 * " " + "schema = {\n")
+        #     class_body.append(8 * " " + "\"type\": \"object\",\n")
+        #     class_body.append(8 * " " + "\"title\": " + "\"The " + class_name + " Schema\",\n")
+        #     class_body.append(8 * " " + "\"required\": [],  # write the fields which must be in response\n")
+        #     class_body.append(8 * " " + "\"properties\": {\n")
+        #
+        # # find the end of class definition: }
+        # while not strip_line.endswith("}") and line:
+        #     if strip_line.startswith("//") or not strip_line:
+        #         strip_line = pb.readline().strip()
+        #         continue
+        #
+        #     class_field = " " * 4 + strip_line.replace(";", "") + "\n"
+        #
+        #     if not is_enum:
+        #         # separate line by space,   such as line : repeated string name = 10;
+        #         split_list = strip_line.split(" ")
+        #         is_ary = False
+        #
+        #         if "reserved" == split_list[0]:
+        #             continue
+        #
+        #         if "repeated" == split_list[0]:
+        #             is_ary = True
+        #             para_filed_annotation = "repeated " + split_list[1]
+        #             para_type = split_list[1]
+        #             para_name = split_list[2]
+        #             para_cmt = split_list[3:]
+        #         else:
+        #             para_filed_annotation = split_list[0]
+        #             para_type = split_list[0]
+        #             para_name = split_list[1]
+        #             para_cmt = split_list[2:]
+        #
+        #         equator_index = para_name.find("=")
+        #         if equator_index != -1:
+        #             para_name = para_name[0:equator_index]
+        #
+        #         class_field = " " * 4 + para_name + " = \"" + para_name + "\"" + "  # " + para_filed_annotation + " "
+        #         for cmt in para_cmt:
+        #             if cmt != "=":
+        #                 class_field += " " + cmt.replace(";", "")
+        #         class_field += "\n"
+        #
+        #         # add get_request content for Request
+        #         if class_type == "BaseRequest":
+        #             class_body.append(12 * " " + "self." + str(para_name) + ": {\n")
+        #             class_body.append(16 * " " + "# " + para_filed_annotation + "\n")
+        #             if not is_ary:
+        #                 class_body.append(16 * " " + "'valid': '',\n")
+        #             else:
+        #                 class_body.append(16 * " " + "'valid': [],\n")
+        #             class_body.append(16 * " " + "'invalid': ''\n")
+        #             class_body.append(12 * " " + "},\n")
+        #
+        #         # add schema for Response
+        #         if class_type == "BaseResponse":
+        #             class_body.append(12 * " " + "\"" + para_name + "\": {\n")
+        #             schema_type = para_type
+        #
+        #             if not (para_type in pb_type_list):
+        #                 schema_type = "object"
+        #
+        #             if is_ary:
+        #                 schema_type = "array"
+        #
+        #             class_body.append(16 * " " + "\"type\": \"" + schema_type + "\",\n")
+        #
+        #             if is_ary:
+        #                 class_body.append(16 * " " + "\"items\": [\n")
+        #                 class_body.append(20 * " " + "{\n")
+        #                 class_body.append(24 * " " + "\"type\": \"object\"," + "  # " + para_type + "\n")
+        #                 class_body.append(20 * " " + "},\n")
+        #                 class_body.append(16 * " " + "]\n")
+        #
+        #             class_body.append(12 * " " + "},\n")
+        #
+        #     # write class properties
+        #     py_file.write(class_field)
+        #     strip_line = pb.readline().strip()
+        #
+        # # add "}" for class body
+        # if class_type == "BaseRequest" or class_type == "BaseResponse":
+        #     class_body.append(8 * " " + "}\n")
+        #
+        # if class_type == "BaseResponse":
+        #     class_body.append(4 * " " + "}\n")
+        #
+        # # write class body: get_request/schema   request/response
+        # for content in class_body:
+        #     py_file.write(content)
+
+    @classmethod
+    def pb_to_request_response_temp(cls, file_name, output_dir):
         if not os.path.isfile(file_name) or not file_name.endswith(".proto"):
             print("Invalid file " + str(file_name))
 
@@ -374,7 +582,7 @@ class Util:
                     py_file.flush()
                     strip_line = pb.readline().strip()
 
-                    # Empty response class: XXXResponse{}
+                    # deal with empty response class: XXXResponse{}
                     if strip_line.endswith("}"):
                         py_file.write(4 * " " + "pass\n")
                         continue
@@ -388,7 +596,7 @@ class Util:
                         class_body.append(4 * " " + "schema = {\n")
                         class_body.append(8 * " " + "\"type\": \"object\",\n")
                         class_body.append(8 * " " + "\"title\": " + "\"The " + class_name + " Schema\",\n")
-                        class_body.append(8 * " " + "\"required\": [],  # write the fields must be in response\n")
+                        class_body.append(8 * " " + "\"required\": [],  # write the fields which must be in response\n")
                         class_body.append(8 * " " + "\"properties\": {\n")
 
                     # find the end of class definition: }
@@ -400,6 +608,7 @@ class Util:
                         class_field = " " * 4 + strip_line.replace(";", "") + "\n"
 
                         if not is_enum:
+                            # separate line by space,   such as line : repeated string name = 10;
                             split_list = strip_line.split(" ")
                             is_ary = False
 
@@ -428,6 +637,7 @@ class Util:
                                     class_field += " " + cmt.replace(";", "")
                             class_field += "\n"
 
+                            # add get_request content for Request
                             if class_type == "BaseRequest":
                                 class_body.append(12 * " " + "self." + str(para_name) + ": {\n")
                                 class_body.append(16 * " " + "# " + para_filed_annotation + "\n")
@@ -438,6 +648,7 @@ class Util:
                                 class_body.append(16 * " " + "'invalid': ''\n")
                                 class_body.append(12 * " " + "},\n")
 
+                            # add schema for Response
                             if class_type == "BaseResponse":
                                 class_body.append(12 * " " + "\"" + para_name + "\": {\n")
                                 schema_type = para_type
@@ -459,14 +670,7 @@ class Util:
 
                                 class_body.append(12 * " " + "},\n")
 
-                        # "type": "array",
-                        # "items": [
-                        #     {
-                        #         "type": "string",
-                        #         "minLength": 5
-                        #     },
-
-                        # write class filed
+                        # write class properties
                         py_file.write(class_field)
                         strip_line = pb.readline().strip()
 
@@ -477,9 +681,9 @@ class Util:
                     if class_type == "BaseResponse":
                         class_body.append(4 * " " + "}\n")
 
-                    # if len(class_body) > 3:
-                    for class_field in class_body:
-                        py_file.write(class_field)
+                    # write class body: get_request/schema   request/response
+                    for content in class_body:
+                        py_file.write(content)
 
     @classmethod
     def pb2py(cls, file_name, output_dir="./services", api_suffix="", interface_type=APIType.public,
@@ -491,6 +695,6 @@ class Util:
 
 
 if __name__ == '__main__':
-    file = "/Users/justin/Project/MYProject/PyAPITesting/project/example/pb.proto"
+    file = "/Users/mayi/Project/PyAPITesting/project/example/pb.proto"
     Util.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
                api_list_name="APINameList")

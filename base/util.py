@@ -346,11 +346,10 @@ class Util:
                        "from base.base_request import Message, BaseRequest, BaseResponse\n"]
 
         # get classes from pb
-        blob_list = cls.get_blob_list(pb_content)
         class_content = []
-        for py_class_list in cls.get_class_from_pb(blob_list):
-            for py_class in py_class_list:
-                class_content.append(py_class)
+        class_list = cls.get_class_from_pb(pb_content)
+        for py_class in class_list:
+            class_content.append(py_class)
 
         # write python classes to file
         file_content = file_header + class_content
@@ -378,11 +377,11 @@ class Util:
                 continue
 
             blob_content = []
-            blob_end_found = False
             flag_tag_count = 0
+            blob_end_found = False
 
             # find last line of blob
-            while line and not blob_end_found and index < length:
+            while index < length and not blob_end_found:
 
                 if line.endswith("{\n"):
                     flag_tag_count += 1
@@ -399,17 +398,108 @@ class Util:
                     line = pb_content[index]
                     index += 1
 
+            # add blob to blob_list
+            blob_list.append(blob_content)
+            print(blob_content)
+        return blob_list
+
+    # @classmethod
+    # def get_blob_list(cls, pb_content):
+    #     # support embedded message
+    #     blob_list = []
+    #     index = 0
+    #     length = len(pb_content)
+    #
+    #     # separate pb into blobs by keywords enum/message
+    #     while index < length:
+    #         line = str(pb_content[index])
+    #         index += 1
+    #
+    #         if not line.lstrip().startswith("enum ") and not line.lstrip().startswith("message "):
+    #             continue
+    #
+    #         blob_content = []
+    #         blob_end_found = False
+    #         flag_tag_count = 0
+    #
+    #         # find last line of blob
+    #         while line and not blob_end_found and index < length:
+    #
+    #             if line.endswith("{\n"):
+    #                 flag_tag_count += 1
+    #
+    #             if line.endswith("}\n"):
+    #                 flag_tag_count -= 1
+    #
+    #             if flag_tag_count == 0:
+    #                 blob_end_found = True
+    #
+    #             blob_content.append(line)
+    #
+    #             if not blob_end_found:
+    #                 line = pb_content[index]
+    #                 index += 1
+    #
+    #             if line.lstrip().startswith("enum ") or line.lstrip().startswith("message "):
+    #                 content, skip_index = cls.get_blob_list(pb_content[index - 1:])
+    #                 blob_list.append(content)
+    #                 index += skip_index - 1
+    #                 print("embedded class found")
+    #
+    #         # add blob to blob_list
+    #         blob_list.append(blob_content)
+    #         print(blob_content)
+    #         print(index)
+    #     return blob_list, index
+    @classmethod
+    def analyze_pb_content(cls, pb_content):
+        # support embedded message
+        class_list = []
+        index = 0
+        length = len(pb_content)
+
+        # separate pb into blobs by keywords enum/message
+        while index < length:
+            line = str(pb_content[index])
+            index += 1
+
+            if not line.lstrip().startswith("enum ") and not line.lstrip().startswith("message "):
+                continue
+
+            blob_content = []
+            flag_tag_count = 0
+            blob_end_found = False
+
+            # find last line of blob
+            while not blob_end_found and index < length:
+
+                blob_content.append(line)
+
+                if line.endswith("{\n"):
+                    flag_tag_count += 1
+
+                if line.endswith("}\n"):
+                    flag_tag_count -= 1
+
+                if flag_tag_count == 0:
+                    blob_end_found = True
+                    break
+
+                if not blob_end_found:
+                    line = pb_content[index]
+                    index += 1
+
                 if line.lstrip().startswith("enum ") or line.lstrip().startswith("message "):
-                    content, skip_index = cls.get_blob_list(pb_content[index-1:])
-                    blob_list.append(content)
+                    content, skip_index = cls.analyze_pb_content(pb_content[index - 1:])
+                    # blob_list.append(content)
+                    content.append(class_list)
                     index += skip_index - 1
                     print("embedded class found")
 
             # add blob to blob_list
-            blob_list.append(blob_content)
+            class_list.append(blob_content)
             print(blob_content)
-            print(index)
-        return blob_list, index
+        return class_list
 
     @classmethod
     def get_class_from_pb(cls, pb_blob):
@@ -419,6 +509,12 @@ class Util:
         blob_list = cls.get_blob_list(pb_blob)
 
         class_content = []
+        class_list = []
+
+        for content in blob_list:
+            class_list = cls.analyze_pb_content(content)
+            class_content.append(class_list)
+
         return class_content
         # class_name = line.split(" ")[1]
         # class_name = class_name.replace("{", "").replace("\n", "")

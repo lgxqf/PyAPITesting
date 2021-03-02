@@ -55,10 +55,10 @@ package example.project;
 //  repeated string name = 10;
 //}
 //
-//message CompareResponse {
-//  string image_id = 1 [(validator.field) = {length_lt: 256}];
-//  repeated Result result = 2;
-//}
+message CompareResponse {
+  string image_id = 1 [(validator.field) = {length_lt: 256}];
+  repeated Result result = 2;
+}
 //
 //message Info {
 //  string track_id = 1;
@@ -69,16 +69,15 @@ package example.project;
 //}
 
 message CrowdRealtimeAnalysisConfig {
+  int32 y = 6;
 
   message RealtimeAnalysisOutputConfig {
-    bool enable = 1;
     int32 min_interval = 2;
   }
   int32 x = 6;
 
   message AnotherClass {
     bool enable = 1;
-    int32 min_interval = 2;
   }
 
   bool density_map_config = 3;

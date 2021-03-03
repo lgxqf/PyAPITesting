@@ -2,14 +2,16 @@
 import datetime
 import logging
 import os
-from base.base_func import *
-from base.util import get_log_path
-from settings import project_root
 
-RESULT_DIR = "test_results"
+import settings
+from base.base_func import *
+from base.util import Util
+from settings import project_root
 
 
 def run_case(host, path_list, project_name, stop_if_failure, dummy_run, log, **kwargs):
+    result_dir = "result_dir"
+
     error_cases = {}
     ok_cases = {}
     pass_case_list = []
@@ -18,7 +20,7 @@ def run_case(host, path_list, project_name, stop_if_failure, dummy_run, log, **k
     case_count = 0
     no_doc_case = []
     begin_time = datetime.datetime.now()
-    result_file_name = RESULT_DIR + os.sep + 'result_' + time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime()) + '.txt'
+    result_file_name = result_dir + os.sep + 'result_' + time.strftime('%Y-%m-%d_%H_%M_%S', time.localtime()) + '.txt'
 
     error_found = False
 
@@ -42,7 +44,7 @@ def run_case(host, path_list, project_name, stop_if_failure, dummy_run, log, **k
                             case_file.append(os.path.join(r, item))
 
             for test_case in case_file:
-                func = test_case.split(os.path.sep)[-1].replace('.py', '')
+                func = str(test_case.split(os.path.sep)[-1]).replace('.py', '')
                 flow_flag = False
                 func_name_flag = False
                 func_name = "def " + func + "("
@@ -195,7 +197,7 @@ def run_case(host, path_list, project_name, stop_if_failure, dummy_run, log, **k
 
 if __name__ == '__main__':
 
-    log = log_config(c_level=logging.DEBUG, f_level=logging.DEBUG, out_path=get_log_path())[0]
+    log = log_config(c_level=logging.DEBUG, f_level=logging.DEBUG, out_path=Util.get_log_path(settings.project_root))[0]
 
     project = 'example'
 

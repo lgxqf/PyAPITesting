@@ -1,7 +1,7 @@
 from base.base_func import BaseService
 from .api_config import APINameList, APIConfig
 from settings import TEST_ENV
-from .request_response import *  # Keep this, or [api_name + 'Request'] class wil not be found in globals()
+from .request_response import *   # Keep this, or [api_name + 'Request'] class wil not be found in globals()
 
 
 class APIService(BaseService):

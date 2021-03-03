@@ -2,6 +2,51 @@
 from base.base_request import Message, BaseRequest, BaseResponse
 
 
+class AnalysisConfigRequest(BaseRequest):
+    y = "y"  # int32  1
+    x = "x"  # int32  2
+    map_config = "map_config"  # bool  3
+    time = "time"  # RealtimeConfig  4
+    map = "map"  # MapConfig  5
+
+    def get_request(self):
+        return {
+            self.y: {
+                # int32
+                'valid': '',
+                'invalid': ''
+            },
+            self.x: {
+                # int32
+                'valid': '',
+                'invalid': ''
+            },
+            self.map_config: {
+                # bool
+                'valid': '',
+                'invalid': ''
+            },
+            self.time: {
+                # RealtimeConfig
+                'valid': '',
+                'invalid': ''
+            },
+            self.map: {
+                # MapConfig
+                'valid': '',
+                'invalid': ''
+            },
+        }
+
+
+class RealtimeConfig(Message):
+    min_interval = "min_interval"  # int32  1
+
+
+class MapConfig(Message):
+    size = "size"  # int32  1
+
+
 class AuthorizationRequest(BaseRequest):
     account = "account"  # string  1 [(validator.field) {regex:"^[a-zA-Z0-9_\\-\\.]+$", length_gt: 3, length_lt: 21}]
     password = "password"  # string  2 [(validator.field) {regex:"^[a-zA-Z0-9]+$",length_gt: 5, length_lt: 19}]
@@ -167,18 +212,3 @@ class Info(Message):
     entity_id = "entity_id"  # string  3
     captured_time = "captured_time"  # google.protobuf.Timestamp  4
     image_url = "image_url"  # string  5
-
-
-class CrowdRealtimeAnalysisConfig(Message):
-    y = "y"  # int32  6
-    x = "x"  # int32  6
-    density_map_config = "density_map_config"  # bool  3
-    roi = "roi"  # RealtimeAnalysisOutputConfig  4
-
-
-class RealtimeAnalysisOutputConfig(Message):
-    min_interval = "min_interval"  # int32  2
-
-
-class AnotherClass(Message):
-    enable = "enable"  # bool  1

@@ -6,6 +6,23 @@ import "github.com/mwitkow/go-proto-validators/validator.proto";
 
 package example.project;
 
+message AnalysisConfigRequest {
+  int32 y = 1;
+  int32 x = 2;
+
+  message RealtimeConfig {
+    int32 min_interval = 1;
+  }
+
+  message MapConfig {
+    int32 size = 1;
+  }
+
+  bool map_config = 3;
+  RealtimeConfig time = 4;
+  MapConfig map = 5;
+}
+
 message AuthorizationRequest {
   string account = 1 [(validator.field) = {regex:"^[a-zA-Z0-9_\\-\\.]+$", length_gt: 3, length_lt: 21}];
   string password = 2 [(validator.field) = {regex:"^[a-zA-Z0-9]+$",length_gt: 5, length_lt: 19}];
@@ -67,23 +84,6 @@ message Info {
   google.protobuf.Timestamp captured_time = 4;
   string image_url = 5;
 }
-
-message CrowdRealtimeAnalysisConfig {
-  int32 y = 6;
-
-  message RealtimeAnalysisOutputConfig {
-    int32 min_interval = 2;
-  }
-  int32 x = 6;
-
-  message AnotherClass {
-    bool enable = 1;
-  }
-
-  bool density_map_config = 3;
-  RealtimeAnalysisOutputConfig roi = 4;
-}
-
 
 service ExamplePublic {
 

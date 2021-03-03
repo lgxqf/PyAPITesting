@@ -52,10 +52,11 @@ class Util:
         if not os.path.exists(path):
             os.makedirs(path)
 
-    def get_log_path(cls, dir_name='log', project_root=None):
+    @classmethod
+    def get_log_path(cls, dir_name='log', project_root_path=None):
         cwd = os.path.dirname(os.path.realpath(__file__))
-        dir_index = cwd.rindex(project_root)
-        log_path = cwd[: dir_index + len(project_root)] + os.sep + 'test_results' + os.sep + dir_name
+        dir_index = cwd.rindex(project_root_path)
+        log_path = cwd[: dir_index + len(project_root_path)] + os.sep + 'test_results' + os.sep + dir_name
         return log_path
 
     @classmethod
@@ -492,47 +493,55 @@ class Util:
 
     @classmethod
     def analyze_pb_content(cls, pb_content, class_dict):
-        # support analyzing embedded message
-        index = 0
+        """
+        support analyzing embedded message
+        extract class from pb and save to class_dict
+        pb_content must be an intact pb blob: such as
+            message MapConfig {
+                    int32 size = 1;
+                    }
+        """
+        line = str(pb_content[0]).lstrip()
+
+        if not line.startswith("enum ") and not line.startswith("message "):
+            raise Exception("Not a valid class blob, first line is " + line)
+
+        key = line
+        class_dict[key] = [line]
+
         length = len(pb_content)
+        flag_tag_count = 0
         blob_end_found = False
+        line = str(pb_content[1]).lstrip()
 
-        # separate pb into blobs by keywords enum/message
-        while index < length and not blob_end_found:
-            line = str(pb_content[index]).lstrip()
+        index = 1
+        flag_tag_count += 1
 
-            if not line.startswith("enum ") and not line.startswith("message "):
-                index += 1
+        # find last line of blob
+        while not blob_end_found and index < length:
+            if line.startswith("enum ") or line.startswith("message "):
+                skip_index = cls.analyze_pb_content(pb_content[index:], class_dict)
+                index += skip_index + 1
+                print("embedded class found: " + str(index) + " : " + line)
+                line = pb_content[index].lstrip()
                 continue
 
-            key = line
-            class_dict[key] = []
-            flag_tag_count = 0
+            if len(line) > 1:  # ignore empty line which contain only "\n" or "":
+                class_dict[key].append(line)
 
-            # find last line of blob
-            while not blob_end_found and index < length:
-                if len(line) > 1:  # ignore empty line which contain only "\n" or "":
-                    class_dict[key].append(line)
+            if line.endswith("{\n"):
+                flag_tag_count += 1
 
-                if line.endswith("{\n"):
-                    flag_tag_count += 1
+            if line.endswith("}\n"):
+                flag_tag_count -= 1
 
-                if line.endswith("}\n"):
-                    flag_tag_count -= 1
+            if flag_tag_count == 0:
+                blob_end_found = True
+                break
 
-                if flag_tag_count == 0:
-                    blob_end_found = True
-                    break
-
-                if not blob_end_found:
-                    index += 1
-                    if index < length:
-                        line = pb_content[index].lstrip()
-
-                if line.startswith("enum ") or line.startswith("message "):
-                    skip_index = cls.analyze_pb_content(pb_content[index - 1:], class_dict)
-                    index += skip_index
-                    print("embedded class found: " + str(index) + " " + line)
+            if not blob_end_found:
+                index += 1
+                if index < length:
                     line = pb_content[index].lstrip()
 
         return index

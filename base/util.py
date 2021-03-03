@@ -53,19 +53,19 @@ class Util:
             os.makedirs(path)
 
     @classmethod
-    def get_log_path(cls, dir_name='log', project_root_path=None):
+    def get_log_path(cls, dir_name='log',project_name="PyAPITesting"):
         cwd = os.path.dirname(os.path.realpath(__file__))
-        dir_index = cwd.rindex(project_root_path)
-        log_path = cwd[: dir_index + len(project_root_path)] + os.sep + 'test_results' + os.sep + dir_name
+        dir_index = cwd.rindex(project_name)
+        log_path = cwd[: dir_index + len(project_name)] + os.sep + 'test_results' + os.sep + dir_name
         return log_path
 
-    @classmethod
-    def get_project_path(cls, dir_name=None):
-        cwd = os.path.dirname(os.path.realpath(__file__))
-
-        root_name = project_root
-        dir_index = cwd.rindex(root_name)
-        return cwd[: dir_index + len(root_name)] + os.sep + dir_name
+    # @classmethod
+    # def get_project_path(cls, dir_name=None):
+    #     cwd = os.path.dirname(os.path.realpath(__file__))
+    #
+    #     root_name = project_root
+    #     dir_index = cwd.rindex(root_name)
+    #     return cwd[: dir_index + len(root_name)] + os.sep + dir_name
 
     @classmethod
     def get_project_home(cls):

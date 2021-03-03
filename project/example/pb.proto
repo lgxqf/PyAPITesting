@@ -42,19 +42,19 @@ package example.project;
 //  bool is_hit = 4;
 //}
 //
-//message CompareRequest {
-//  string device_id = 1 [(validator.field) = {regex:"^[0-9]+$", length_eq: 20}];
-//  google.protobuf.Timestamp captured_time = 2;
-//  bytes image = 3;
-//  string image_id = 4;
-//  bytes liveness_image = 5;
-//  string image_url = 6;
-//  string face_id = 7;
-//  Personnel personnel = 8;
-//  Status status = 9;
-//  repeated string name = 10;
-//}
-//
+message CompareRequest {
+  string device_id = 1 [(validator.field) = {regex:"^[0-9]+$", length_eq: 20}];
+  google.protobuf.Timestamp captured_time = 2;
+  bytes image = 3;
+  string image_id = 4;
+  bytes liveness_image = 5;
+  string image_url = 6;
+  string face_id = 7;
+  Personnel personnel = 8;
+  Status status = 9;
+  repeated string name = 10;
+}
+
 message CompareResponse {
   string image_id = 1 [(validator.field) = {length_lt: 256}];
   repeated Result result = 2;

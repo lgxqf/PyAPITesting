@@ -347,10 +347,10 @@ class Util:
 
         # get classes from pb
         class_content = []
-        class_dict = cls.get_class_from_pb(pb_content)
-        for key in class_dict.keys():
-            # class_content.extend()
-            cls.generate_class_from_pb(class_dict[key])
+        class_blob_dict = cls.get_class_blob_from_pb(pb_content)
+        for key in class_blob_dict.keys():
+            value = cls.generate_class_from_pb(class_blob_dict[key])
+            class_content.extend(value)
 
         print(class_content)
         # write python classes to file
@@ -364,142 +364,134 @@ class Util:
             pass
 
     @classmethod
-    def generate_class_from_pb(cls, pb_content):
+    def generate_class_from_pb(cls, class_blob):
         pb_type_list = ["bool", "string", "bytes", "double", "float", "int32", "int64", "uint32",
                         "uint64", "sint32", "sint64", "fixed32", "fixed64", "sfixed32", "sfixed64"]
-        while line:
-            line = pb.readline()
 
-            # class found in pb
-            is_enum = line.startswith("enum ")
-            is_message = line.startswith("message ")
+        line = class_blob[0].lstrip()
+        is_enum = line.startswith("enum ")
 
-            if not is_enum and not is_message:
-                continue
+        class_name = line.split(" ")[1]
+        class_name = class_name.replace("{", "").replace("\n", "")
+        class_type = "Message"
 
-            class_name = line.split(" ")[1]
-            class_name = class_name.replace("{", "").replace("\n", "")
-            class_name_list.append(class_name)
-            class_type = "Message"
+        class_body = []
+        class_field = []
 
-            if "Request {" in line or "Request{" in line:
-                class_type = "BaseRequest"
+        if "Request {" in line or "Request{" in line:
+            class_type = "BaseRequest"
+            class_body = ["\n" + 4 * " " + "def get_request(self):\n", 8 * " " + "return {\n"]
 
-            if "Response {" in line or "Response{" in line:
-                class_type = "BaseResponse"
+        if "Response {" in line or "Response{" in line:
+            class_type = "BaseResponse"
+            class_body.append(4 * " " + "schema = {\n")
+            class_body.append(8 * " " + "\"type\": \"object\",\n")
+            class_body.append(8 * " " + "\"title\": " + "\"The " + class_name + " Schema\",\n")
+            class_body.append(8 * " " + "\"required\": [],  # write the fields which must be in response\n")
+            class_body.append(8 * " " + "\"properties\": {\n")
 
-            # write class name
-            value = 2 * "\n" + "class " + class_name + "(" + class_type + ")" + ":\n"
-            py_file.write(value)
-            py_file.flush()
-            strip_line = pb.readline().strip()
+        # write class name
+        class_content = [2 * "\n" + "class " + class_name + "(" + class_type + ")" + ":\n"]
 
-            # deal with empty response class: XXXResponse{}
-            if strip_line.endswith("}"):
-                py_file.write(4 * " " + "pass\n")
-                continue
+        # deal with empty response class: XXXResponse{}, which has only two line
+        if 2 == len(class_blob) and line.endswith("}"):
+            class_content.append(4 * " " + "pass\n")
+            return class_content
 
-            class_body = []
+        for line in class_blob[1:]:
 
-            if class_type == "BaseRequest":
-                class_body = ["\n" + 4 * " " + "def get_request(self):\n", 8 * " " + "return {\n"]
-
-            if class_type == "BaseResponse":
-                class_body.append(4 * " " + "schema = {\n")
-                class_body.append(8 * " " + "\"type\": \"object\",\n")
-                class_body.append(8 * " " + "\"title\": " + "\"The " + class_name + " Schema\",\n")
-                class_body.append(8 * " " + "\"required\": [],  # write the fields which must be in response\n")
-                class_body.append(8 * " " + "\"properties\": {\n")
-
+            # strip_line = ""  # Remove
             # find the end of class definition: }
-            while not strip_line.endswith("}") and line:
-                if strip_line.startswith("//") or not strip_line:
-                    strip_line = pb.readline().strip()
+            # while not strip_line.endswith("}") and line:
+            # if strip_line.startswith("//") or not strip_line:
+            #     strip_line = pb.readline().strip()
+            #     continue
+            line = line.strip()
+
+            if line.endswith("}"):
+                break
+
+            class_field = " " * 4 + line.replace(";", "") + "\n"
+
+            if not is_enum:
+                # separate line by space,   such as line : repeated string name = 10;
+                split_list = line.split(" ")
+                is_ary = False
+
+                if "reserved" == split_list[0]:
                     continue
 
-                class_field = " " * 4 + strip_line.replace(";", "") + "\n"
+                if "repeated" == split_list[0]:
+                    is_ary = True
+                    para_filed_annotation = "repeated " + split_list[1]
+                    para_type = split_list[1]
+                    para_name = split_list[2]
+                    para_cmt = split_list[3:]
+                else:
+                    para_filed_annotation = split_list[0]
+                    para_type = split_list[0]
+                    para_name = split_list[1]
+                    para_cmt = split_list[2:]
 
-                if not is_enum:
-                    # separate line by space,   such as line : repeated string name = 10;
-                    split_list = strip_line.split(" ")
-                    is_ary = False
+                equator_index = para_name.find("=")
+                if equator_index != -1:
+                    para_name = para_name[0:equator_index]
 
-                    if "reserved" == split_list[0]:
-                        continue
+                class_field = " " * 4 + para_name + " = \"" + para_name + "\"" + "  # " + para_filed_annotation + " "
+                for cmt in para_cmt:
+                    if cmt != "=":
+                        class_field += " " + cmt.replace(";", "")
+                class_field += "\n"
 
-                    if "repeated" == split_list[0]:
-                        is_ary = True
-                        para_filed_annotation = "repeated " + split_list[1]
-                        para_type = split_list[1]
-                        para_name = split_list[2]
-                        para_cmt = split_list[3:]
+                # add get_request content for Request
+                if class_type == "BaseRequest":
+                    class_body.append(12 * " " + "self." + str(para_name) + ": {\n")
+                    class_body.append(16 * " " + "# " + para_filed_annotation + "\n")
+                    if not is_ary:
+                        class_body.append(16 * " " + "'valid': '',\n")
                     else:
-                        para_filed_annotation = split_list[0]
-                        para_type = split_list[0]
-                        para_name = split_list[1]
-                        para_cmt = split_list[2:]
+                        class_body.append(16 * " " + "'valid': [],\n")
+                    class_body.append(16 * " " + "'invalid': ''\n")
+                    class_body.append(12 * " " + "},\n")
 
-                    equator_index = para_name.find("=")
-                    if equator_index != -1:
-                        para_name = para_name[0:equator_index]
+                # add schema for Response
+                if class_type == "BaseResponse":
+                    class_body.append(12 * " " + "\"" + para_name + "\": {\n")
+                    schema_type = para_type
 
-                    class_field = " " * 4 + para_name + " = \"" + para_name + "\"" + "  # " + para_filed_annotation + " "
-                    for cmt in para_cmt:
-                        if cmt != "=":
-                            class_field += " " + cmt.replace(";", "")
-                    class_field += "\n"
+                    if not (para_type in pb_type_list):
+                        schema_type = "object"
 
-                    # add get_request content for Request
-                    if class_type == "BaseRequest":
-                        class_body.append(12 * " " + "self." + str(para_name) + ": {\n")
-                        class_body.append(16 * " " + "# " + para_filed_annotation + "\n")
-                        if not is_ary:
-                            class_body.append(16 * " " + "'valid': '',\n")
-                        else:
-                            class_body.append(16 * " " + "'valid': [],\n")
-                        class_body.append(16 * " " + "'invalid': ''\n")
-                        class_body.append(12 * " " + "},\n")
+                    if is_ary:
+                        schema_type = "array"
 
-                    # add schema for Response
-                    if class_type == "BaseResponse":
-                        class_body.append(12 * " " + "\"" + para_name + "\": {\n")
-                        schema_type = para_type
+                    class_body.append(16 * " " + "\"type\": \"" + schema_type + "\",\n")
 
-                        if not (para_type in pb_type_list):
-                            schema_type = "object"
+                    if is_ary:
+                        class_body.append(16 * " " + "\"items\": [\n")
+                        class_body.append(20 * " " + "{\n")
+                        class_body.append(24 * " " + "\"type\": \"object\"," + "  # " + para_type + "\n")
+                        class_body.append(20 * " " + "},\n")
+                        class_body.append(16 * " " + "]\n")
 
-                        if is_ary:
-                            schema_type = "array"
+                    class_body.append(12 * " " + "},\n")
 
-                        class_body.append(16 * " " + "\"type\": \"" + schema_type + "\",\n")
+            # write class properties
+            class_content.append(class_field)
 
-                        if is_ary:
-                            class_body.append(16 * " " + "\"items\": [\n")
-                            class_body.append(20 * " " + "{\n")
-                            class_body.append(24 * " " + "\"type\": \"object\"," + "  # " + para_type + "\n")
-                            class_body.append(20 * " " + "},\n")
-                            class_body.append(16 * " " + "]\n")
+        # add "}" for class body
+        if class_type == "BaseRequest" or class_type == "BaseResponse":
+            class_body.append(8 * " " + "}\n")
 
-                        class_body.append(12 * " " + "},\n")
+        if class_type == "BaseResponse":
+            class_body.append(4 * " " + "}\n")
 
-                # write class properties
-                py_file.write(class_field)
-                strip_line = pb.readline().strip()
-
-            # add "}" for class body
-            if class_type == "BaseRequest" or class_type == "BaseResponse":
-                class_body.append(8 * " " + "}\n")
-
-            if class_type == "BaseResponse":
-                class_body.append(4 * " " + "}\n")
-
-            # write class body: get_request/schema   request/response
-            for content in class_body:
-                py_file.write(content)
+        # write class body: get_request/schema   request/response
+        class_content.extend(class_body)
+        return class_content
 
     @classmethod
-    def get_class_from_pb(cls, pb_blob):
-
+    def get_class_blob_from_pb(cls, pb_blob):
         blob_list = cls.get_blob_list(pb_blob)
 
         class_dict = {}
@@ -511,17 +503,17 @@ class Util:
 
     @classmethod
     def get_blob_list(cls, pb_content):
-        # get first level message/enum which may contain embedded message
+        # get first level blob(message/enum)
         blob_list = []
         index = 0
         length = len(pb_content)
 
         # separate pb into blobs by keywords enum/message
         while index < length:
-            line = str(pb_content[index])
+            line = str(pb_content[index]).lstrip()
             index += 1
 
-            if not line.lstrip().startswith("enum ") and not line.lstrip().startswith("message "):
+            if not line.startswith("enum ") and not line.startswith("message "):
                 continue
 
             blob_content = []
@@ -530,7 +522,9 @@ class Util:
 
             # find last line of blob
             while index < length and not blob_end_found:
-                blob_content.append(line)
+                # ignore empty line
+                if len(line) > 1:
+                    blob_content.append(line)
 
                 if line.endswith("{\n"):
                     flag_tag_count += 1
@@ -542,73 +536,25 @@ class Util:
                     blob_end_found = True
 
                 if not blob_end_found:
-                    line = pb_content[index]
+                    line = pb_content[index].lstrip()
                     index += 1
 
             # add blob to blob_list
             blob_list.append(blob_content)
         return blob_list
 
-    # @classmethod
-    # def get_blob_list(cls, pb_content):
-    #     # support embedded message
-    #     blob_list = []
-    #     index = 0
-    #     length = len(pb_content)
-    #
-    #     # separate pb into blobs by keywords enum/message
-    #     while index < length:
-    #         line = str(pb_content[index])
-    #         index += 1
-    #
-    #         if not line.lstrip().startswith("enum ") and not line.lstrip().startswith("message "):
-    #             continue
-    #
-    #         blob_content = []
-    #         blob_end_found = False
-    #         flag_tag_count = 0
-    #
-    #         # find last line of blob
-    #         while line and not blob_end_found and index < length:
-    #
-    #             if line.endswith("{\n"):
-    #                 flag_tag_count += 1
-    #
-    #             if line.endswith("}\n"):
-    #                 flag_tag_count -= 1
-    #
-    #             if flag_tag_count == 0:
-    #                 blob_end_found = True
-    #
-    #             blob_content.append(line)
-    #
-    #             if not blob_end_found:
-    #                 line = pb_content[index]
-    #                 index += 1
-    #
-    #             if line.lstrip().startswith("enum ") or line.lstrip().startswith("message "):
-    #                 content, skip_index = cls.get_blob_list(pb_content[index - 1:])
-    #                 blob_list.append(content)
-    #                 index += skip_index - 1
-    #                 print("embedded class found")
-    #
-    #         # add blob to blob_list
-    #         blob_list.append(blob_content)
-    #         print(blob_content)
-    #         print(index)
-    #     return blob_list, index
     @classmethod
     def analyze_pb_content(cls, pb_content, class_dict):
-        # support embedded message
+        # support analyzing embedded message
         index = 0
         length = len(pb_content)
         blob_end_found = False
 
         # separate pb into blobs by keywords enum/message
         while index < length and not blob_end_found:
-            line = str(pb_content[index])
+            line = str(pb_content[index]).lstrip()
 
-            if not line.lstrip().startswith("enum ") and not line.lstrip().startswith("message "):
+            if not line.startswith("enum ") and not line.startswith("message "):
                 index += 1
                 continue
 
@@ -618,12 +564,8 @@ class Util:
 
             # find last line of blob
             while not blob_end_found and index < length:
-                if not line == os.linesep:
+                if len(line) > 1:  # ignore empty line which contain only "\n" or "":
                     class_dict[key].append(line)
-                # print("Line ===" + line)
-                # print("Key " + key)
-                # print("Value " + str(class_dict[key]))
-                # print("index " + str(index))
 
                 if line.endswith("{\n"):
                     flag_tag_count += 1
@@ -638,13 +580,12 @@ class Util:
                 if not blob_end_found:
                     index += 1
                     if index < length:
-                        line = pb_content[index]
+                        line = pb_content[index].lstrip()
 
-                if line.lstrip().startswith("enum ") or line.lstrip().startswith("message "):
-                    # class_dict[key] = class_dict[key][:-1]
+                if line.startswith("enum ") or line.startswith("message "):
                     skip_index = cls.analyze_pb_content(pb_content[index - 1:], class_dict)
                     index += skip_index
-                    line = pb_content[index]
+                    line = pb_content[index].lstrip()
                     print("embedded class found: " + str(index) + " " + pb_content[index])
 
         return index
@@ -807,3 +748,52 @@ if __name__ == '__main__':
     file = "../project/example/pb.proto"
     Util.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
                api_list_name="APINameList")
+
+    # @classmethod
+    # def get_blob_list(cls, pb_content):
+    #     # support embedded message
+    #     blob_list = []
+    #     index = 0
+    #     length = len(pb_content)
+    #
+    #     # separate pb into blobs by keywords enum/message
+    #     while index < length:
+    #         line = str(pb_content[index])
+    #         index += 1
+    #
+    #         if not line.lstrip().startswith("enum ") and not line.lstrip().startswith("message "):
+    #             continue
+    #
+    #         blob_content = []
+    #         blob_end_found = False
+    #         flag_tag_count = 0
+    #
+    #         # find last line of blob
+    #         while line and not blob_end_found and index < length:
+    #
+    #             if line.endswith("{\n"):
+    #                 flag_tag_count += 1
+    #
+    #             if line.endswith("}\n"):
+    #                 flag_tag_count -= 1
+    #
+    #             if flag_tag_count == 0:
+    #                 blob_end_found = True
+    #
+    #             blob_content.append(line)
+    #
+    #             if not blob_end_found:
+    #                 line = pb_content[index]
+    #                 index += 1
+    #
+    #             if line.lstrip().startswith("enum ") or line.lstrip().startswith("message "):
+    #                 content, skip_index = cls.get_blob_list(pb_content[index - 1:])
+    #                 blob_list.append(content)
+    #                 index += skip_index - 1
+    #                 print("embedded class found")
+    #
+    #         # add blob to blob_list
+    #         blob_list.append(blob_content)
+    #         print(blob_content)
+    #         print(index)
+    #     return blob_list, index

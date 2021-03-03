@@ -411,7 +411,7 @@ class Util:
                         class_body.append(16 * " " + "'valid': '',\n")
                     else:
                         class_body.append(16 * " " + "'valid': [],\n")
-                    class_body.append(16 * " " + "'invalid': ''\n")
+                    class_body.append(16 * " " + "'invalid': []\n")
                     class_body.append(12 * " " + "},\n")
 
                 # add schema for Response

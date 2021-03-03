@@ -14,27 +14,27 @@ class AnalysisConfigRequest(BaseRequest):
             self.y: {
                 # int32
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.x: {
                 # int32
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.map_config: {
                 # bool
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.time: {
                 # RealtimeConfig
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.map: {
                 # MapConfig
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
         }
 
@@ -56,12 +56,12 @@ class AuthorizationRequest(BaseRequest):
             self.account: {
                 # string
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.password: {
                 # string
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
         }
 
@@ -133,52 +133,52 @@ class CompareRequest(BaseRequest):
             self.device_id: {
                 # string
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.captured_time: {
                 # google.protobuf.Timestamp
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.image: {
                 # bytes
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.image_id: {
                 # string
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.liveness_image: {
                 # bytes
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.image_url: {
                 # string
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.face_id: {
                 # string
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.personnel: {
                 # Personnel
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.status: {
                 # Status
                 'valid': '',
-                'invalid': ''
+                'invalid': []
             },
             self.name: {
                 # repeated string
                 'valid': [],
-                'invalid': ''
+                'invalid': []
             },
         }
 

@@ -3,8 +3,8 @@ from base.base_request import BaseRequest, BaseResponse
 
 
 class ErrorMsg(object):
-    invalid_account = 'user name is invalid'
-    invalid_password = 'password is not correct'
+    invalid_account = 'name is invalid'
+    invalid_password = 'password is wrong'
 
 
 class AuthorizationRequest(BaseRequest):
@@ -14,11 +14,11 @@ class AuthorizationRequest(BaseRequest):
     def get_request(self):
         return {
             self.account: {
-                'valid': 'admin',
+                'valid': 'a',
                 'invalid': [("", ErrorMsg.invalid_account), (None, ErrorMsg.invalid_account)],
             },
             self.password: {
-                'valid': 'admin_123',
+                'valid': 'ad',
                 'invalid': [("", ErrorMsg.invalid_password), (None, ErrorMsg.invalid_password)],
             }
         }

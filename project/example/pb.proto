@@ -6,42 +6,42 @@ import "github.com/mwitkow/go-proto-validators/validator.proto";
 
 package example.project;
 
-//message AuthorizationRequest {
-//  string account = 1 [(validator.field) = {regex:"^[a-zA-Z0-9_\\-\\.]+$", length_gt: 3, length_lt: 21}];
-//  string password = 2 [(validator.field) = {regex:"^[a-zA-Z0-9]+$",length_gt: 5, length_lt: 19}];
-//}
-//
-//message AuthorizationResponse {
-//  string token = 1;
-//}
-//
-//message EmptyRequest {
-//}
-//
-//message EmptyResponse {
-//}
-//
-//
-//enum Personnel {
-//  PERSONNEL_LEVEL_UNKNOWN = 0;
-//  PERSONNEL_LEVEL_RED = 1;
-//  PERSONNEL_LEVEL_ORANGE = 2;
-//  PERSONNEL_LEVEL_YELLOW = 3;
-//
-//}
-//
-//enum Status {
-//  STATUS_SEND = 0;
-//  STATUS_UNSEND = 1;
-//}
-//
-//message Result {
-//  string key = 1;
-//  float score = 2;
-//  string personnel_kind = 3;
-//  bool is_hit = 4;
-//}
-//
+message AuthorizationRequest {
+  string account = 1 [(validator.field) = {regex:"^[a-zA-Z0-9_\\-\\.]+$", length_gt: 3, length_lt: 21}];
+  string password = 2 [(validator.field) = {regex:"^[a-zA-Z0-9]+$",length_gt: 5, length_lt: 19}];
+}
+
+message AuthorizationResponse {
+  string token = 1;
+}
+
+message EmptyRequest {
+}
+
+message EmptyResponse {
+}
+
+
+enum Personnel {
+  PERSONNEL_LEVEL_UNKNOWN = 0;
+  PERSONNEL_LEVEL_RED = 1;
+  PERSONNEL_LEVEL_ORANGE = 2;
+  PERSONNEL_LEVEL_YELLOW = 3;
+
+}
+
+enum Status {
+  STATUS_SEND = 0;
+  STATUS_UNSEND = 1;
+}
+
+message Result {
+  string key = 1;
+  float score = 2;
+  string personnel_kind = 3;
+  bool is_hit = 4;
+}
+
 message CompareRequest {
   string device_id = 1 [(validator.field) = {regex:"^[0-9]+$", length_eq: 20}];
   google.protobuf.Timestamp captured_time = 2;
@@ -59,14 +59,14 @@ message CompareResponse {
   string image_id = 1 [(validator.field) = {length_lt: 256}];
   repeated Result result = 2;
 }
-//
-//message Info {
-//  string track_id = 1;
-//  string device_id = 2;
-//  string entity_id = 3;
-//  google.protobuf.Timestamp captured_time = 4;
-//  string image_url = 5;
-//}
+
+message Info {
+  string track_id = 1;
+  string device_id = 2;
+  string entity_id = 3;
+  google.protobuf.Timestamp captured_time = 4;
+  string image_url = 5;
+}
 
 message CrowdRealtimeAnalysisConfig {
   int32 y = 6;

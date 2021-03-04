@@ -556,6 +556,6 @@ class Util:
 
 
 if __name__ == '__main__':
-    file = "../project/example/pb/pb.proto"
+    file = "../pb/example.proto"
     Util.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
                api_list_name="APINameList")

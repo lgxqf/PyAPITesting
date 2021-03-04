@@ -17,12 +17,12 @@
 - 仅支持Protobuf3,且proto文件要提前做好格式化
 - Protobuf中定义的request必须名字以Request结尾: XXXRequest
 - Protobuf中定义的response必须名字以Response结尾: XXXResponse
+_ oneof关键字会生成单独的类 需要额外手动处理
 
 ## TODO
 - 每个Response支持生成到单独的文件
 -  分析 validator[(validator.field) = {length_gt: 0}];
    [(validator.field) = {int_gt: 0, int_lt: 10000}];
-- 支持 pb Oneof关键字分析   
 - 测试 AnalysisConfigRequest
 
 

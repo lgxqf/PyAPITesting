@@ -1,0 +1,47 @@
+login/mcw: # 接口路径
+  method: POST # 接口方法
+  body_mode: json # 请求体格式
+  request_schema: # 请求jsonschem 不传则不做输入合法性校验
+    {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+      },
+      "required": [
+        "username",
+        "password"
+      ]
+    }
+  response_schema: # 响应jsonschem, 根据schema生成mock数据
+    {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer", # 数据类型
+          "maximun": 100, # 数据范围 最大
+          "minimun": 1 # 数据范围 最小
+        },
+        "msg": {
+          "type": "string"
+        },
+        "token": {
+          "type": "string"
+        },
+      },
+      "required": [   # 若指定required, 则每次必定返回 code、 msg字段, token字段则随机返回
+        "code",
+        "msg"
+      ]
+    }
+  defined_data_list: # 自定义返回 如果请求体于list中的body匹配， 则返回对应的response
+    [
+      {
+        body:{"username":"edison", "password":"123"},
+        response:{"code":-1, "msg":"密码输入不正确"}
+      }
+    ]

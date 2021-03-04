@@ -7,8 +7,8 @@ import "github.com/mwitkow/go-proto-validators/validator.proto";
 package example.project;
 
 message AnalysisConfigRequest {
-  int32 y = 1 [(validator.field) = {int_gt: 0, int_lt: 10000}];
-  int32 x = 2;
+  int32 age = 1 [(validator.field) = {int_gt: 0, int_lt: 100}];
+  string name = 2 [(validator.field) = {regex:"^[a-z0-9\\-]+$", length_eq: 50}];
 
   message RealtimeConfig {
     int32 min_interval = 1;

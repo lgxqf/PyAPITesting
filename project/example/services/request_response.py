@@ -40,7 +40,7 @@ class AnalysisConfigRequest(BaseRequest):
 
 
 class RealtimeConfig(Message):
-    min_interval = "min_interval"  # int32  1
+    min_interval = "min_interval"  # int32  1  [(validator.field) {int_gt: 0, int_lt: 10000}]
 
 
 class MapConfig(Message):

@@ -53,7 +53,7 @@ class Util:
             os.makedirs(path)
 
     @classmethod
-    def get_log_path(cls, dir_name='log',project_name="PyAPITesting"):
+    def get_log_path(cls, dir_name='log', project_name="PyAPITesting"):
         cwd = os.path.dirname(os.path.realpath(__file__))
         dir_index = cwd.rindex(project_name)
         log_path = cwd[: dir_index + len(project_name)] + os.sep + 'test_results' + os.sep + dir_name
@@ -187,8 +187,8 @@ class Util:
         if not os.path.isfile(file_name) or not file_name.endswith(".proto"):
             print("Invalid file " + str(file_name))
 
-        rpc_prefix = "    rpc "
-        service_prefix = "service "
+        rpc_prefix = "rpc "
+        # service_prefix = "service "
         http_method_list = ["get", "post", "delete", "put"]
         api_name_dict = {}
 
@@ -197,18 +197,22 @@ class Util:
             # 找到service开头的部分
             while line:
                 line = pb.readline()
-                if line.startswith(service_prefix):
+                if line.startswith("service "):
+                    print(line)
                     break
 
             api_name_found = False
             api = None
 
+            newline = line
             # 每个接口以 rcp 开头
-            while line:
-                line = pb.readline()
+            while newline:
+                newline = pb.readline()
+                line = newline.strip()
+
                 # 找到了接口 取出接口名字
                 # rpc VerifyToken(VTRequest) returns (VTResponse)
-                if line.startswith(rpc_prefix) and not api_name_found:
+                if line.strip().startswith(rpc_prefix) and not api_name_found:
                     api_start_index = len(rpc_prefix)
                     api_end_index = line.index("(")
                     api = line[api_start_index: api_end_index]
@@ -503,6 +507,10 @@ class Util:
         """
         line = str(pb_content[0]).lstrip()
 
+        if line.startswith("oneof "):
+            print("oneof key word is found : " + line)
+            line = line.replace("oneof ", "message RENAME_IT_")
+
         if not line.startswith("enum ") and not line.startswith("message "):
             raise Exception("Not a valid class blob, first line is " + line)
 
@@ -519,10 +527,11 @@ class Util:
 
         # find last line of blob
         while not blob_end_found and index < length:
-            if line.startswith("enum ") or line.startswith("message "):
+            if line.startswith("enum ") or line.startswith("message ") or line.startswith("oneof "):
                 skip_index = cls.analyze_pb_content(pb_content[index:], class_dict)
                 index += skip_index + 1
-                print("embedded class found: " + str(index) + " : " + line)
+                if not line.startswith("oneof "):
+                    print("embedded class : " + str(index) + " : " + line)
                 line = pb_content[index].lstrip()
                 continue
 

@@ -3,7 +3,7 @@ from base.base_request import Message, BaseRequest, BaseResponse
 
 
 class AnalysisConfigRequest(BaseRequest):
-    y = "y"  # int32  1
+    y = "y"  # int32  1 [(validator.field) {int_gt: 0, int_lt: 10000}]
     x = "x"  # int32  2
     map_config = "map_config"  # bool  3
     time = "time"  # RealtimeConfig  4
@@ -45,6 +45,11 @@ class RealtimeConfig(Message):
 
 class MapConfig(Message):
     size = "size"  # int32  1
+
+
+class RENAME_IT_location(Message):
+    latitude = "latitude"  # int32  6
+    longitude = "longitude"  # int32  7
 
 
 class AuthorizationRequest(BaseRequest):

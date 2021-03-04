@@ -3,21 +3,21 @@ from base.base_request import Message, BaseRequest, BaseResponse
 
 
 class AnalysisConfigRequest(BaseRequest):
-    y = "y"  # int32  1 [(validator.field) {int_gt: 0, int_lt: 10000}]
-    x = "x"  # int32  2
+    age = "age"  # int32  1 [(validator.field) {int_gt: 0, int_lt: 100}]
+    name = "name"  # string  2 [(validator.field) {regex:"^[a-z0-9\\-]+$", length_eq: 50}]
     map_config = "map_config"  # bool  3
     time = "time"  # RealtimeConfig  4
     map = "map"  # MapConfig  5
 
     def get_request(self):
         return {
-            self.y: {
+            self.age: {
                 # int32
                 'valid': '',
                 'invalid': []
             },
-            self.x: {
-                # int32
+            self.name: {
+                # string
                 'valid': '',
                 'invalid': []
             },
@@ -40,7 +40,7 @@ class AnalysisConfigRequest(BaseRequest):
 
 
 class RealtimeConfig(Message):
-    min_interval = "min_interval"  # int32  1  [(validator.field) {int_gt: 0, int_lt: 10000}]
+    min_interval = "min_interval"  # int32  1
 
 
 class MapConfig(Message):

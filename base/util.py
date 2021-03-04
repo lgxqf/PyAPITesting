@@ -59,14 +59,6 @@ class Util:
         log_path = cwd[: dir_index + len(project_name)] + os.sep + 'test_results' + os.sep + dir_name
         return log_path
 
-    # @classmethod
-    # def get_project_path(cls, dir_name=None):
-    #     cwd = os.path.dirname(os.path.realpath(__file__))
-    #
-    #     root_name = project_root
-    #     dir_index = cwd.rindex(root_name)
-    #     return cwd[: dir_index + len(root_name)] + os.sep + dir_name
-
     @classmethod
     def get_project_home(cls):
         cwd = os.path.dirname(os.path.realpath(__file__))
@@ -564,7 +556,94 @@ class Util:
                                    interface_type=interface_type, api_list_name=api_list_name, protocol="https")
 
 
+class ApiStruct:
+    def __init__(self):
+        self.name = ""
+        self.uri = ""
+        self.method = "POST"
+        self.req_class = ""
+        self.res_class = ""
+
+    def __str__(self):
+        return self.name + " " + self.req_class + " " + self.res_class + " " + self.method + " " + self.uri
+
+
+class YamlContent:
+    def __init__(self):
+        self.uri = ""
+        self.method = "POST"
+        self.request_schema = ""
+        self.response_schema = ""
+        self.defined_data_list = ""
+
+
+class Pb2Yaml:
+    @classmethod
+    def pb2ymal(cls, pb_file_name):
+        if not os.path.isfile(pb_file_name) or not pb_file_name.endswith(".proto"):
+            print("Invalid file " + str(pb_file_name))
+
+        with open(pb_file_name, "r") as pb:
+            api_struct_list = cls.get_api_list(pb)
+            pb.seek(0)
+            req_res_list = cls.get_request_response(pb)
+            yaml_content_list = cls.get_yaml_content_list(api_struct_list)
+
+    @classmethod
+    def get_request_response(cls, pb):
+        pass
+
+    @classmethod
+    def get_yaml_content_list(cls, api_list):
+        pass
+
+    @classmethod
+    def get_api_list(cls, pb):
+        api_list = []
+
+        rpc_prefix = "rpc "
+        http_method_list = ["get", "post", "delete", "put"]
+        line = " test"
+
+        # 找到service开头的部分
+        while line:
+            line = pb.readline()
+            if line.startswith("service "):
+                print(line)
+                break
+
+        while line:
+            line = pb.readline()
+            strip_line = line.strip()
+
+            # ignore empty line
+            if len(strip_line) == 0:
+                continue
+
+            # 每个接口以 "rcp " 开头 如： rpc Verify(VerifyRequest) returns (VerifyResponse)
+            if strip_line.startswith(rpc_prefix):
+                api_struct = ApiStruct()
+                api_struct.name = strip_line[len(rpc_prefix): strip_line.index("(")]
+                api_struct.req_class = strip_line[strip_line.index("(") + 1:strip_line.index(")")]
+                api_struct.res_class = strip_line[strip_line.rindex("(") + 1:strip_line.rindex(")")]
+
+                while not strip_line.endswith("}"):
+                    strip_line = pb.readline().strip()
+                    for method in http_method_list:
+                        if -1 != strip_line.find(method + ":"):
+                            api_struct.uri = strip_line.split(":")[1].replace("\n", "").replace("\"", "")
+                            api_struct.method = method.upper()
+                            api_list.append(api_struct)
+                print(api_struct)
+
+        if not len(api_list) > 0:
+            print("No api is found in pb")
+
+        return api_list
+
+
 if __name__ == '__main__':
     file = "../pb/example.proto"
-    Util.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
-               api_list_name="APINameList")
+    Pb2Yaml.pb2ymal(file)
+    # Util.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
+    #            api_list_name="APINameList")

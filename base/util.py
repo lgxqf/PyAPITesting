@@ -586,15 +586,15 @@ class Pb2Yaml:
         with open(pb_file_name, "r") as pb:
             api_struct_list = cls.get_api_list(pb)
             pb.seek(0)
-            req_res_list = cls.get_request_response(pb)
-            yaml_content_list = cls.get_yaml_content_list(api_struct_list)
+            req_res_list = cls.get_request_response(pb, api_struct_list)
+            yaml_content_list = cls.get_yaml_content_list(api_struct_list, gen_req=False, gen_res=True)
 
     @classmethod
-    def get_request_response(cls, pb):
+    def get_request_response(cls, pb, api_struct_list):
         pass
 
     @classmethod
-    def get_yaml_content_list(cls, api_list):
+    def get_yaml_content_list(cls, api_list, gen_req=True, gen_res=True):
         pass
 
     @classmethod

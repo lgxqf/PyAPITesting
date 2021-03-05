@@ -586,12 +586,135 @@ class Pb2Yaml:
         with open(pb_file_name, "r") as pb:
             api_struct_list = cls.get_api_list(pb)
             pb.seek(0)
-            req_res_list = cls.get_request_response(pb, api_struct_list)
+            pb_content = pb.readlines()
+            req_res_list = cls.get_request_response(pb_content, api_struct_list)
             yaml_content_list = cls.get_yaml_content_list(api_struct_list, gen_req=False, gen_res=True)
 
     @classmethod
     def get_request_response(cls, pb, api_struct_list):
-        pass
+        # get classes from pb
+        class_content = []
+        class_blob_dict = cls.get_class_blob_from_pb(pb)
+
+        for api in api_struct_list:
+            api.req_class = cls.generate_class(class_blob_dict[api.req_class])
+
+    @classmethod
+    def generate_class(cls, class_blob):
+        pb_type_list = ["bool", "string", "bytes", "double", "float", "int32", "int64", "uint32",
+                        "uint64", "sint32", "sint64", "fixed32", "fixed64", "sfixed32", "sfixed64"]
+
+        line = class_blob[0].lstrip()
+        is_enum = line.startswith("enum ")
+
+        class_name = line.split(" ")[1]
+        class_name = class_name.replace("{", "").replace("\n", "")
+        class_type = "Message"
+        class_body = []
+
+        if "Request {" in line or "Request{" in line:
+            class_type = "BaseRequest"
+            class_body = ["\n" + 4 * " " + "def get_request(self):\n", 8 * " " + "return {\n"]
+
+        if "Response {" in line or "Response{" in line:
+            class_type = "BaseResponse"
+            class_body.append(4 * " " + "schema = {\n")
+            class_body.append(8 * " " + "\"type\": \"object\",\n")
+            class_body.append(8 * " " + "\"title\": " + "\"The " + class_name + " Schema\",\n")
+            class_body.append(8 * " " + "\"required\": [],  # write the fields which must be in response\n")
+            class_body.append(8 * " " + "\"properties\": {\n")
+
+        # write class name
+        class_content = [2 * "\n" + "class " + class_name + "(" + class_type + ")" + ":\n"]
+
+        # deal with empty response class: XXXResponse{}, which has only two line
+        if 2 == len(class_blob) and line.endswith("}"):
+            class_content.append(4 * " " + "pass\n")
+            return class_content
+
+        for line in class_blob[1:]:
+            line = line.strip()
+
+            if line.endswith("}"):
+                break
+
+            class_field = " " * 4 + line.replace(";", "") + "\n"
+
+            if not is_enum:
+                # separate line by space,   such as line : repeated string name = 10;
+                split_list = line.split(" ")
+                is_ary = False
+
+                if "reserved" == split_list[0]:
+                    continue
+
+                if "repeated" == split_list[0]:
+                    is_ary = True
+                    para_filed_annotation = "repeated " + split_list[1]
+                    para_type = split_list[1]
+                    para_name = split_list[2]
+                    para_cmt = split_list[3:]
+                else:
+                    para_filed_annotation = split_list[0]
+                    para_type = split_list[0]
+                    para_name = split_list[1]
+                    para_cmt = split_list[2:]
+
+                equator_index = para_name.find("=")
+                if equator_index != -1:
+                    para_name = para_name[0:equator_index]
+
+                class_field = " " * 4 + para_name + " = \"" + para_name + "\"" + "  # " + para_filed_annotation + " "
+                for cmt in para_cmt:
+                    if cmt != "=":
+                        class_field += " " + cmt.replace(";", "")
+                class_field += "\n"
+
+                # add get_request content for Request
+                if class_type == "BaseRequest":
+                    class_body.append(12 * " " + "self." + str(para_name) + ": {\n")
+                    class_body.append(16 * " " + "# " + para_filed_annotation + "\n")
+                    if not is_ary:
+                        class_body.append(16 * " " + "'valid': '',\n")
+                    else:
+                        class_body.append(16 * " " + "'valid': [],\n")
+                    class_body.append(16 * " " + "'invalid': []\n")
+                    class_body.append(12 * " " + "},\n")
+
+                # add schema for Response
+                if class_type == "BaseResponse":
+                    class_body.append(12 * " " + "\"" + para_name + "\": {\n")
+                    schema_type = para_type
+
+                    if not (para_type in pb_type_list):
+                        schema_type = "object"
+
+                    if is_ary:
+                        schema_type = "array"
+
+                    class_body.append(16 * " " + "\"type\": \"" + schema_type + "\",\n")
+
+                    if is_ary:
+                        class_body.append(16 * " " + "\"items\": [\n")
+                        class_body.append(20 * " " + "{\n")
+                        class_body.append(24 * " " + "\"type\": \"object\"," + "  # " + para_type + "\n")
+                        class_body.append(20 * " " + "},\n")
+                        class_body.append(16 * " " + "]\n")
+
+                    class_body.append(12 * " " + "},\n")
+
+            class_content.append(class_field)
+
+        # add "}" for class body
+        if class_type == "BaseRequest" or class_type == "BaseResponse":
+            class_body.append(8 * " " + "}\n")
+
+        if class_type == "BaseResponse":
+            class_body.append(4 * " " + "}\n")
+
+        # write class body: get_request/schema   request/response
+        class_content.extend(class_body)
+        return class_content
 
     @classmethod
     def get_yaml_content_list(cls, api_list, gen_req=True, gen_res=True):
@@ -640,6 +763,119 @@ class Pb2Yaml:
             print("No api is found in pb")
 
         return api_list
+
+    @classmethod
+    def get_blob_list(cls, pb_content):
+        # get first level blob(message/enum)
+        blob_list = []
+        index = 0
+        length = len(pb_content)
+
+        # separate pb into blobs by keywords enum/message
+        while index < length:
+            line = str(pb_content[index]).lstrip()
+            index += 1
+
+            if not line.startswith("enum ") and not line.startswith("message "):
+                continue
+
+            blob_content = []
+            flag_tag_count = 0
+            blob_end_found = False
+
+            # find last line of blob
+            while index < length and not blob_end_found:
+                # ignore empty line
+                if len(line) > 1:
+                    blob_content.append(line)
+
+                if line.endswith("{\n"):
+                    flag_tag_count += 1
+
+                if line.endswith("}\n"):
+                    flag_tag_count -= 1
+
+                if flag_tag_count == 0:
+                    blob_end_found = True
+
+                if not blob_end_found:
+                    line = pb_content[index].lstrip()
+                    index += 1
+
+            # add blob to blob_list
+            blob_list.append(blob_content)
+        return blob_list
+
+    @classmethod
+    def get_class_blob_from_pb(cls, pb_blob):
+        blob_list = cls.get_blob_list(pb_blob)
+
+        class_dict = {}
+
+        for blob in blob_list:
+            cls.analyze_pb_content(blob, class_dict)
+
+        return class_dict
+
+    @classmethod
+    def analyze_pb_content(cls, pb_content, class_dict):
+        """
+        support analyzing embedded message
+        extract class from pb and save to class_dict
+        pb_content must be an intact pb blob: such as
+            message MapConfig {
+                    int32 size = 1;
+                    }
+        """
+        line = str(pb_content[0]).lstrip()
+
+        if line.startswith("oneof "):
+            print("oneof key word is found : " + line)
+            line = line.replace("oneof ", "message RENAME_IT_")
+
+        if not line.startswith("enum ") and not line.startswith("message "):
+            raise Exception("Not a valid class blob, first line is " + line)
+
+        key = line.strip().split(" ")[1]
+        class_dict[key] = [line]
+
+        length = len(pb_content)
+        flag_tag_count = 0
+        blob_end_found = False
+        line = str(pb_content[1]).lstrip()
+
+        index = 1
+        flag_tag_count += 1
+
+        # find last line of blob
+        while not blob_end_found and index < length:
+            if line.startswith("enum ") or line.startswith("message ") or line.startswith("oneof "):
+                skip_index = cls.analyze_pb_content(pb_content[index:], class_dict)
+                index += skip_index + 1
+                if not line.startswith("oneof "):
+                    print("embedded class : " + str(index) + " : " + line)
+                line = pb_content[index].lstrip()
+                continue
+
+            if len(line) > 1:  # ignore empty line which contain only "\n" or "":
+                class_dict[key].append(line)
+
+            if line.endswith("{\n"):
+                flag_tag_count += 1
+
+            if line.endswith("}\n"):
+                flag_tag_count -= 1
+
+            if flag_tag_count == 0:
+                blob_end_found = True
+                break
+
+            if not blob_end_found:
+                index += 1
+                if index < length:
+                    line = pb_content[index].lstrip()
+
+        return index
 
 
 if __name__ == '__main__':

@@ -556,20 +556,6 @@ class Util:
                                    interface_type=interface_type, api_list_name=api_list_name, protocol="https")
 
 
-class ApiStruct:
-    def __init__(self):
-        self.name = ""
-        self.uri = ""
-        self.method = "POST"
-        self.req_class = ""
-        self.res_class = ""
-        self.req_schema = ""
-        self.res_schema = ""
-
-    def __str__(self):
-        return self.name + " " + self.req_class + " " + self.res_class + " " + self.method + " " + self.uri
-
-
 if __name__ == '__main__':
     file = "../pb/example.proto"
     Util.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,

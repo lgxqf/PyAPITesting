@@ -59,9 +59,12 @@ enum Status {
 
 message Result {
   string key = 1;
-  float score = 2;
+  bytes score_desc = 2;
   string personnel_kind = 3;
   bool is_hit = 4;
+  float hit_score = 5;
+  double similar_score = 6;
+  int32 count = 7;
 }
 
 message CompareRequest {
@@ -79,7 +82,14 @@ message CompareRequest {
 
 message CompareResponse {
   string image_id = 1 [(validator.field) = {length_lt: 256}];
-  repeated Result result = 2;
+  bytes score_desc = 2;
+  string personnel_kind = 3;
+  bool is_hit = 4;
+  float hit_score = 5;
+  double similar_score = 6;
+  int32 count = 7;
+  repeated Result result = 8;
+
 }
 
 message Info {

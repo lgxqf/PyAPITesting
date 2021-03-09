@@ -415,13 +415,35 @@ class Util:
                     class_body.append(12 * " " + "\"" + para_name + "\": {\n")
                     schema_type = para_type
 
+                    type_name_changed = False
+
                     if not (para_type in pb_type_list):
                         schema_type = "object"
+                        type_name_changed = True
+
+                    if schema_type == "bool":
+                        schema_type = "boolean"
+                        type_name_changed = True
+
+                    if schema_type == "bytes":
+                        schema_type = "string"
+                        type_name_changed = True
+
+                    if -1 != schema_type.find("int") or -1 != schema_type.find("fixed"):
+                        schema_type = "integer"
+                        type_name_changed = True
+
+                    if schema_type == "double" or schema_type == "float":
+                        schema_type = "number"
+                        type_name_changed = True
 
                     if is_ary:
                         schema_type = "array"
 
-                    class_body.append(16 * " " + "\"type\": \"" + schema_type + "\",\n")
+                    if type_name_changed:
+                        class_body.append(16 * " " + "\"type\": \"" + schema_type + "\",  # " + para_type + "\n")
+                    else:
+                        class_body.append(16 * " " + "\"type\": \"" + schema_type + "\",\n")
 
                     if is_ary:
                         class_body.append(16 * " " + "\"items\": [\n")

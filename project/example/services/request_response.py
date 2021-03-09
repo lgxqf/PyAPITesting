@@ -116,9 +116,12 @@ class Status(Message):
 
 class Result(Message):
     key = "key"  # string  1
-    score = "score"  # float  2
+    score_desc = "score_desc"  # bytes  2
     personnel_kind = "personnel_kind"  # string  3
     is_hit = "is_hit"  # bool  4
+    hit_score = "hit_score"  # float  5
+    similar_score = "similar_score"  # double  6
+    count = "count"  # int32  7
 
 
 class CompareRequest(BaseRequest):
@@ -190,7 +193,13 @@ class CompareRequest(BaseRequest):
 
 class CompareResponse(BaseResponse):
     image_id = "image_id"  # string  1 [(validator.field) {length_lt: 256}]
-    result = "result"  # repeated Result  2
+    score_desc = "score_desc"  # bytes  2
+    personnel_kind = "personnel_kind"  # string  3
+    is_hit = "is_hit"  # bool  4
+    hit_score = "hit_score"  # float  5
+    similar_score = "similar_score"  # double  6
+    count = "count"  # int32  7
+    result = "result"  # repeated Result  8
     schema = {
         "type": "object",
         "title": "The CompareResponse Schema",
@@ -199,8 +208,26 @@ class CompareResponse(BaseResponse):
             "image_id": {
                 "type": "string",
             },
+            "score_desc": {
+                "type": "string",  # bytes
+            },
+            "personnel_kind": {
+                "type": "string",
+            },
+            "is_hit": {
+                "type": "boolean",  # bool
+            },
+            "hit_score": {
+                "type": "number",  # float
+            },
+            "similar_score": {
+                "type": "number",  # double
+            },
+            "count": {
+                "type": "integer",  # int32
+            },
             "result": {
-                "type": "array",
+                "type": "array",  # Result
                 "items": [
                     {
                         "type": "object",  # Result

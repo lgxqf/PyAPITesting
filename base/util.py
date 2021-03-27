@@ -133,6 +133,9 @@ class Util:
 
         print(str(len(case_write_list)) + " cases add ID field")
 
+
+class PB2Py:
+
     @classmethod
     def get_api_name(cls, api_name):
         new_name = [api_name[0]]
@@ -533,14 +536,13 @@ class Util:
 
         length = len(pb_content)
         flag_tag_count = 0
-        blob_end_found = False
         line = str(pb_content[1]).lstrip()
 
         index = 1
         flag_tag_count += 1
 
         # find last line of blob
-        while not blob_end_found and index < length:
+        while flag_tag_count != 0 and index < length:
             if line.startswith("enum ") or line.startswith("message ") or line.startswith("oneof "):
                 skip_index = cls.analyze_pb_content(pb_content[index:], class_dict)
                 index += skip_index + 1
@@ -559,26 +561,40 @@ class Util:
                 flag_tag_count -= 1
 
             if flag_tag_count == 0:
-                blob_end_found = True
                 break
 
-            if not blob_end_found:
-                index += 1
-                if index < length:
-                    line = pb_content[index].lstrip()
+            index += 1
+            if index < length:
+                line = pb_content[index].lstrip()
 
         return index
 
     @classmethod
     def pb2py(cls, file_name, output_dir="./services", api_suffix="", interface_type=APIType.public,
               api_list_name=None):
-        cls.create_dir(output_dir)
+        Util.create_dir(output_dir)
         cls.pb_to_request_response(file_name=file_name, output_dir=output_dir)
         cls.pb_to_interface_config(file_name=file_name, output_dir=output_dir, api_suffix=api_suffix,
                                    interface_type=interface_type, api_list_name=api_list_name, protocol="https")
 
 
+class Swagger2Py:
+    @classmethod
+    def swagger2py(cls, file_name, output_dir="./services", api_suffix="", interface_type=APIType.public,
+                   api_list_name=None):
+        Util.create_dir(output_dir)
+        cls.swagger_to_request_response(file_name=file_name, output_dir=output_dir)
+        # cls.swagger_to_interface_config(file_name=file_name, output_dir=output_dir, api_suffix=api_suffix,interface_type=interface_type, api_list_name=api_list_name, protocol="https")
+
+    @classmethod
+    def swagger_to_request_response(file_name, output_dir):
+        pass
+
+
 if __name__ == '__main__':
     file = "../pb/example.proto"
-    Util.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
-               api_list_name="APINameList")
+    # file = "../pb/swagger.json"
+    PB2Py.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
+                api_list_name="APINameList")
+    #Util.swagger2py(file, output_dir="../project/", api_suffix="", interface_type=APIType.internal,
+    #                api_list_name="APINameList")

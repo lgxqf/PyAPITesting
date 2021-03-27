@@ -578,16 +578,31 @@ class PB2Py:
                                    interface_type=interface_type, api_list_name=api_list_name, protocol="https")
 
 
+class ApiStruct:
+    def __init__(self):
+        self.name = ""
+        self.uri = ""
+        self.method = "POST"
+        self.req_class = ""
+        self.res_class = ""
+        self.req_schema = ""
+        self.res_schema = ""
+
+    def __str__(self):
+        return self.name + " " + self.req_class + " " + self.res_class + " " + self.method + " " + self.uri
+
+
 class Swagger2Py:
     @classmethod
     def swagger2py(cls, file_name, output_dir="./services", api_suffix="", interface_type=APIType.public,
                    api_list_name=None):
         Util.create_dir(output_dir)
         cls.swagger_to_request_response(file_name=file_name, output_dir=output_dir)
-        # cls.swagger_to_interface_config(file_name=file_name, output_dir=output_dir, api_suffix=api_suffix,interface_type=interface_type, api_list_name=api_list_name, protocol="https")
+        # cls.swagger_to_interface_config(file_name=file_name, output_dir=output_dir,
+        # api_suffix=api_suffix,interface_type=interface_type, api_list_name=api_list_name, protocol="https")
 
     @classmethod
-    def swagger_to_request_response(file_name, output_dir):
+    def swagger_to_request_response(cls, file_name, output_dir):
         pass
 
 
@@ -596,5 +611,5 @@ if __name__ == '__main__':
     # file = "../pb/swagger.json"
     PB2Py.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
                 api_list_name="APINameList")
-    #Util.swagger2py(file, output_dir="../project/", api_suffix="", interface_type=APIType.internal,
+    # Util.swagger2py(file, output_dir="../project/", api_suffix="", interface_type=APIType.internal,
     #                api_list_name="APINameList")

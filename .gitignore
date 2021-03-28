@@ -8,6 +8,7 @@
 *.zip
 
 swagger.json
+server.proto
 
 */results/*
 */report/*

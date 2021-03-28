@@ -2,7 +2,7 @@ import logging
 import os
 import string
 import time
-
+import json
 from random import sample
 from base.api_type import APIType
 from settings import project_root
@@ -595,21 +595,135 @@ class ApiStruct:
 class Swagger2Py:
     @classmethod
     def swagger2py(cls, file_name, output_dir="./services", api_suffix="", interface_type=APIType.public,
-                   api_list_name=None):
+                   protocol="https"):
+        if not os.path.isfile(file_name) or not file_name.endswith(".json"):
+            print("Invalid file " + str(file_name))
+            return
+
         Util.create_dir(output_dir)
-        cls.swagger_to_request_response(file_name=file_name, output_dir=output_dir)
-        # cls.swagger_to_interface_config(file_name=file_name, output_dir=output_dir,
-        # api_suffix=api_suffix,interface_type=interface_type, api_list_name=api_list_name, protocol="https")
+        api_struct_list, definitions_dict = cls.analyze_swagger(file_name=file_name)
+        cls.swagger_to_api_config(api_struct_list=api_struct_list, output_dir=output_dir, api_suffix=api_suffix,
+                                  interface_type=interface_type, protocol=protocol)
+        cls.swagger_to_api_service(api_struct_list=api_struct_list, output_dir=output_dir, api_suffix=api_suffix)
+        cls.swagger_to_request_response(api_struct_list=api_struct_list, output_dir=output_dir)
 
     @classmethod
-    def swagger_to_request_response(cls, file_name, output_dir):
+    def analyze_swagger(cls, file_name):
+        api_struct_list = []
+        definitions_dict = {}
+        with open(file_name, "r", encoding='utf-8') as swagger:
+            swagger_content = json.load(swagger)
+            for url in swagger_content['paths']:
+                for method in swagger_content['paths'][url]:
+                    api_struct = ApiStruct()
+                    api_struct.uri = url
+                    api_struct.method = method
+                    api_struct.name = swagger_content['paths'][url][method]['operationId']
+                    api_struct.req_class = swagger_content['paths'][url][method]['responses']
+                    if "parameters" in swagger_content['paths'][url][method].keys():
+                        api_struct.res_class = swagger_content['paths'][url][method]['parameters']
+                    api_struct_list.append(api_struct)
+
+            if "definitions" in swagger_content.keys():
+                for cls_def in swagger_content['definitions']:
+                    definitions_dict[cls_def] = swagger_content['definitions'][cls_def]
+
+        return api_struct_list, definitions_dict
+
+    @classmethod
+    def swagger_to_api_config(cls, api_struct_list, output_dir, api_suffix="", interface_type=APIType.public,
+                              protocol="https"):
+
+        with open(output_dir + os.sep + "api_config.py", "w+") as py_file:
+            py_file.write("from base.api_type import APIType\n")
+            py_file.write("from base.base_func import InterfaceConfig\n")
+
+            py_file.write("\n\nclass APINameList(object):\n")
+            for api in api_struct_list:
+                py_file.write("    " + api.name + api_suffix + " = " + "'" + api.name + "'" + "\n")
+
+            py_file.write("\n\nclass APIConfig:\n")
+            for api in api_struct_list:
+                interface_str = "InterfaceConfig({'method': '" + api.method.upper() + "', 'uri': '" + api.uri + "'" + "}"
+                if interface_type == APIType.internal:
+                    interface_str += ", interface_type=APIType.internal"
+                if interface_type == APIType.public:
+                    interface_str += ", interface_type=APIType.public"
+                interface_str += ", protocol=" + "\"" + protocol + "\""
+                interface_str += ")"
+                py_file.write("    " + api.name + api_suffix + " = " + interface_str + "\n")
+
+    @classmethod
+    def get_api_name(cls, api_name):
+        new_name = [api_name[0]]
+
+        # AlertNewDBAddME->alert_new_db_add_me
+        continuous_upper_letter_count = 0
+
+        api_name_len = len(api_name)
+
+        for index in range(1, len(api_name)):
+            letter = api_name[index]
+
+            if letter.islower():
+                continuous_upper_letter_count = 0
+                new_name.append(letter)
+            else:
+                continuous_upper_letter_count += 1
+                if continuous_upper_letter_count == 1:
+                    new_name.append("_" + letter)
+
+                elif continuous_upper_letter_count > 1 and index + 1 < api_name_len and api_name[index + 1].islower():
+                    new_name.append("_" + letter)
+                else:
+                    new_name.append(letter)
+
+        return ''.join(new_name).lower()
+
+    @classmethod
+    def swagger_to_api_service(cls, api_struct_list, output_dir, api_suffix):
+        with open(output_dir + os.sep + "api_service.py", "w+") as py_file:
+            py_file.write("from base.base_func import BaseService\n")
+            py_file.write("from .api_config import APINameList, APIConfig\n")
+            py_file.write("from settings import TEST_ENV\n")
+            py_file.write(
+                "from .request_response import *  " +
+                " # Keep this, or [api_name + 'Request'] class wil not be found in globals()\n\n\n")
+
+            py_file.write("class APIService(BaseService):\n\n")
+            indent = "    "
+
+            py_file.write(indent + "@classmethod\n")
+            py_file.write(
+                indent + "def call_api(cls, api_name=None, request_body=None, status_success=200, " +
+                "api_config_class=APIConfig, req_class=None, res_class=None):\n")
+
+            py_file.write(
+                indent * 2 + "return super().call_api(req_class=globals()" +
+                "[api_name + 'Request'], res_class=globals()[api_name + 'Response'], " +
+                "api_config_class=api_config_class, env=TEST_ENV, api_name=api_name, " +
+                "request_body=request_body, status_success=status_success)\n\n")
+
+            for api in api_struct_list:
+                py_file.write(indent + "@classmethod\n")
+                py_file.write(
+                    indent + "def " + cls.get_api_name(api.name) + api_suffix + "(cls, request_body=None):\n")
+                py_file.write(
+                    indent * 2 + "request_body = " + api.name + "Request" +
+                    ".get_default_body() if request_body is None else request_body\n")
+                py_file.write(indent * 2 + "api_name = APINameList." + api.name + "\n")
+                py_file.write(
+                    indent * 2 + "ret, res = cls.call_api(api_name=api_name, request_body=request_body)\n")
+                py_file.write(indent * 2 + "return ret, res\n\n")
+
+    @classmethod
+    def swagger_to_request_response(cls, api_struct_list, output_dir):
         pass
 
 
 if __name__ == '__main__':
-    file = "../pb/example.proto"
-    # file = "../pb/swagger.json"
-    PB2Py.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
-                api_list_name="APINameList")
-    # Util.swagger2py(file, output_dir="../project/", api_suffix="", interface_type=APIType.internal,
-    #                api_list_name="APINameList")
+    # file = "../pb/example.proto"
+    file = "../pb/swagger.json"
+    # PB2Py.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
+    #             api_list_name="APINameList")
+    Swagger2Py.swagger2py(file, output_dir="../project/", api_suffix="", interface_type=APIType.internal)

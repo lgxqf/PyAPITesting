@@ -2,6 +2,7 @@
 import functools
 import inspect
 import json
+import os
 import re
 import xmltodict
 import traceback
@@ -17,6 +18,18 @@ LOG_LEVEL = {'CRITICAL': 50, 'ERROR': 40, 'WARNING': 30, 'INFO': 20, 'DEBUG': 10
 s = requests.Session()
 a = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
 s.mount('http://', a)
+
+
+def get_log_path(dir_name='log'):
+    """
+    获得日志文件夹的路径
+    :return:
+    """
+    project_root = 'WhaleApiTesting'
+    cwd = os.path.dirname(os.path.realpath(__file__))
+    dir_index = cwd.rindex(project_root)
+    log_path = cwd[: dir_index + len(project_root)] + os.sep + 'test_results' + os.sep + dir_name
+    return log_path
 
 
 def get_api_prefix(env, host, interface_type):
@@ -46,7 +59,7 @@ def flow(func):
 
         BaseService.log = log
         BaseService.log_msg_flag = False
-        config['log'] = log
+        config['logger'] = log
 
         if 'log_level' in config:
             if config['log_level'].upper() in LOG_LEVEL:

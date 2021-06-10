@@ -2,24 +2,24 @@
 
 ## 主要功能
 
-### 1.根据ProtoBuf文件自动生成Python测试接口， 生成内容包括
+### 根据ProtoBuf(.proto), Swagger(.json)文件自动生成Python测试接口， 生成内容包括
 
 * 接口对应的request和response类 request_response.py
 * 接口的调用方法 api_service.py
 * 接口的名字列表 api_config.py
-* 支持嵌套Message
-
-### 2.自动对Response做检验
-
-* 根据pb定义 校验各字段的类型
+* Proto支持嵌套Message
+* 根据proto定义 校验各字段的类型
 
 
 ## 要求
-
+### Proto
 - 仅支持Protobuf3,且proto文件要提前做好格式化
 - Protobuf中定义的request必须名字以Request结尾: XXXRequest
 - Protobuf中定义的response必须名字以Response结尾: XXXResponse
 - oneof关键字会生成单独的类 需要额外手动处理, 生成的类会以RENAME_IT开头
+
+### Swagger
+- 仅支持工具导出的swagger文件 
 
 ## TODO
 

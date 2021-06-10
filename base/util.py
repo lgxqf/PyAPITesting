@@ -164,7 +164,7 @@ class PB2Py:
         return ''.join(new_name).lower()
 
     """
-        Convert pb(.proto) to interface config file
+        Convert doc(.proto) to interface config file
         file_name: proto file absolute path
         api_suffix: add suffix to api name, such as suffix Public->VerifyTokenPublic
         service ProjectXX {
@@ -283,10 +283,10 @@ class PB2Py:
                         py_file.write(indent * 2 + "return ret, res\n\n")
 
         else:
-            print("No api is found in pb")
+            print("No api is found in doc")
 
     """
-        Convert pb(.proto) to python request response class
+        Convert doc(.proto) to python request response class
         file_name: proto file absolute path
     """
 
@@ -303,7 +303,7 @@ class PB2Py:
         file_header = ["# -*- coding: utf-8 -*-\n",
                        "from base.base_request import Message, BaseRequest, BaseResponse\n"]
 
-        # get classes from pb
+        # get classes from doc
         class_content = []
         class_blob_dict = cls.get_class_blob_from_pb(pb_content)
 
@@ -407,9 +407,10 @@ class PB2Py:
                     class_body.append(12 * " " + "self." + str(para_name) + ": {\n")
                     class_body.append(16 * " " + "# " + para_filed_annotation + "\n")
                     if not is_ary:
-                        class_body.append(16 * " " + "'valid': '',\n")
+                        class_body.append(16 * " " + "'valid': [['']],\n")
                     else:
-                        class_body.append(16 * " " + "'valid': [],\n")
+                        class_body.append(16 * " " + "'valid': [''],\n")
+                    class_body.append(16 * " " + "'boundary': [],\n")
                     class_body.append(16 * " " + "'invalid': []\n")
                     class_body.append(12 * " " + "},\n")
 
@@ -477,7 +478,7 @@ class PB2Py:
         index = 0
         length = len(pb_content)
 
-        # separate pb into blobs by keywords enum/message
+        # separate doc into blobs by keywords enum/message
         while index < length:
             line = str(pb_content[index]).lstrip()
             index += 1
@@ -516,8 +517,8 @@ class PB2Py:
     def analyze_pb_content(cls, pb_content, class_dict):
         """
         support analyzing embedded message
-        extract class from pb and save to class_dict
-        pb_content must be an intact pb blob: such as
+        extract class from doc and save to class_dict
+        pb_content must be an intact doc blob: such as
             message MapConfig {
                     int32 size = 1;
                     }
@@ -583,13 +584,21 @@ class ApiStruct:
         self.name = ""
         self.uri = ""
         self.method = "POST"
+
+        # ProtoBuf
         self.req_class = ""
         self.res_class = ""
         self.req_schema = ""
         self.res_schema = ""
 
+        # Swagger
+        self.summary = ""
+        self.parameters = ""
+        self.responses = ""
+
     def __str__(self):
-        return self.name + " " + self.req_class + " " + self.res_class + " " + self.method + " " + self.uri
+        return self.name + " " + self.uri + self.method + self.req_class + " " + self.res_class + " " + \
+               self.req_schema + " " + self.summary + " " + self.parameters + " " + self.responses
 
 
 class Swagger2Py:
@@ -608,6 +617,56 @@ class Swagger2Py:
         cls.swagger_to_request_response(api_struct_list=api_struct_list, output_dir=output_dir)
 
     @classmethod
+    def get_parameter_class(cls, name, schema):
+        class_body = ["class " + name + "(Message):\n", 4 * " " + "def __init__(self):\n"]
+        inner_class_body = []
+
+        for prop in schema["properties"].keys():
+            prop_type = schema["properties"][prop]["type"]
+
+            value = "\" \" "
+
+            if prop_type == "boolean":
+                value = "False"
+
+            if prop_type == "number":
+                value = "0"
+
+            if prop_type == "array":
+                value = "[]"
+
+            if prop_type == "object":
+                value = "None"
+
+            if prop_type == "null":
+                value = "None"
+
+            comment = prop_type
+
+            if prop_type == "array":
+
+                if "properties" in schema["properties"][prop]["items"].keys():
+                    inner_class_body.extend(
+                        cls.get_parameter_class(name + "_" + prop, schema["properties"][prop]["items"]))
+                    comment += " " + name + "_" + prop
+                else:
+                    comment += " " + schema["properties"][prop]["items"]["type"]
+
+            if "properties" in schema["properties"][prop].keys():
+                comment += name + "_" + prop
+
+            if "description" in schema["properties"][prop].keys():
+                comment += "    " + schema["properties"][prop]["description"].replace("\n", " ")
+
+            class_body.append(8 * " " + "self." + prop + " = " + value + "  # " + comment + "\n")
+
+        class_body.append("\n\n")
+
+        class_body.extend(inner_class_body)
+
+        return class_body
+
+    @classmethod
     def analyze_swagger(cls, file_name):
         api_struct_list = []
         definitions_dict = {}
@@ -618,10 +677,11 @@ class Swagger2Py:
                     api_struct = ApiStruct()
                     api_struct.uri = url
                     api_struct.method = method
-                    api_struct.name = swagger_content['paths'][url][method]['operationId']
-                    api_struct.req_class = swagger_content['paths'][url][method]['responses']
+                    api_struct.summary = swagger_content['paths'][url][method]['summary']
+                    api_struct.name = method + url.replace("/", "_")
+                    api_struct.responses = swagger_content['paths'][url][method]['responses']
                     if "parameters" in swagger_content['paths'][url][method].keys():
-                        api_struct.res_class = swagger_content['paths'][url][method]['parameters']
+                        api_struct.parameters = swagger_content['paths'][url][method]['parameters']
                     api_struct_list.append(api_struct)
 
             if "definitions" in swagger_content.keys():
@@ -638,10 +698,6 @@ class Swagger2Py:
             py_file.write("from base.api_type import APIType\n")
             py_file.write("from base.base_func import InterfaceConfig\n")
 
-            py_file.write("\n\nclass APINameList(object):\n")
-            for api in api_struct_list:
-                py_file.write("    " + api.name + api_suffix + " = " + "'" + api.name + "'" + "\n")
-
             py_file.write("\n\nclass APIConfig:\n")
             for api in api_struct_list:
                 interface_str = "InterfaceConfig({'method': '" + api.method.upper() + "', 'uri': '" + api.uri + "'" + "}"
@@ -651,40 +707,14 @@ class Swagger2Py:
                     interface_str += ", interface_type=APIType.public"
                 interface_str += ", protocol=" + "\"" + protocol + "\""
                 interface_str += ")"
-                py_file.write("    " + api.name + api_suffix + " = " + interface_str + "\n")
-
-    @classmethod
-    def get_api_name(cls, api_name):
-        new_name = [api_name[0]]
-
-        # AlertNewDBAddME->alert_new_db_add_me
-        continuous_upper_letter_count = 0
-
-        api_name_len = len(api_name)
-
-        for index in range(1, len(api_name)):
-            letter = api_name[index]
-
-            if letter.islower():
-                continuous_upper_letter_count = 0
-                new_name.append(letter)
-            else:
-                continuous_upper_letter_count += 1
-                if continuous_upper_letter_count == 1:
-                    new_name.append("_" + letter)
-
-                elif continuous_upper_letter_count > 1 and index + 1 < api_name_len and api_name[index + 1].islower():
-                    new_name.append("_" + letter)
-                else:
-                    new_name.append(letter)
-
-        return ''.join(new_name).lower()
+                py_file.write("    " + api.name + api_suffix + " = " + interface_str + "     # " + api.summary + "\n")
 
     @classmethod
     def swagger_to_api_service(cls, api_struct_list, output_dir, api_suffix):
         with open(output_dir + os.sep + "api_service.py", "w+") as py_file:
             py_file.write("from base.base_func import BaseService\n")
-            py_file.write("from .api_config import APINameList, APIConfig\n")
+            # py_file.write("from .api_config import APINameList, APIConfig\n")
+            py_file.write("from .api_config import APIConfig\n")
             py_file.write("from settings import TEST_ENV\n")
             py_file.write(
                 "from .request_response import *  " +
@@ -695,35 +725,88 @@ class Swagger2Py:
 
             py_file.write(indent + "@classmethod\n")
             py_file.write(
-                indent + "def call_api(cls, api_name=None, request_body=None, status_success=200, " +
-                "api_config_class=APIConfig, req_class=None, res_class=None):\n")
+                indent + "def call_api(cls, req_class=None, res_class=None, api_config_class=APIConfig, env=TEST_ENV,\n" +
+                16 * " " + " request_body=None, status_success=200, api_name=None):\n")
 
             py_file.write(
                 indent * 2 + "return super().call_api(req_class=globals()" +
-                "[api_name + 'Request'], res_class=globals()[api_name + 'Response'], " +
-                "api_config_class=api_config_class, env=TEST_ENV, api_name=api_name, " +
-                "request_body=request_body, status_success=status_success)\n\n")
+                "[api_name + '_Request'], res_class=globals()[api_name + '_Response'], \n" +
+                32 * " " + "api_config_class=api_config_class, env=TEST_ENV, api_name=api_name, \n" +
+                32 * " " + "request_body=request_body, status_success=status_success)\n\n")
 
             for api in api_struct_list:
                 py_file.write(indent + "@classmethod\n")
                 py_file.write(
-                    indent + "def " + cls.get_api_name(api.name) + api_suffix + "(cls, request_body=None):\n")
+                    indent + "def " + api.name + api_suffix + "(cls, request_body=None):\n")
                 py_file.write(
-                    indent * 2 + "request_body = " + api.name + "Request" +
+                    indent * 2 + "request_body = " + api.name + "_Request" +
                     ".get_default_body() if request_body is None else request_body\n")
-                py_file.write(indent * 2 + "api_name = APINameList." + api.name + "\n")
+                # py_file.write(indent * 2 + "api_name = APINameList." + api.name + "\n")
                 py_file.write(
-                    indent * 2 + "ret, res = cls.call_api(api_name=api_name, request_body=request_body)\n")
+                    indent * 2 + "ret, res = cls.call_api(api_name=" + "'" + api.name + "'" + ", request_body"
+                                                                                              "=request_body)\n")
                 py_file.write(indent * 2 + "return ret, res\n\n")
 
     @classmethod
     def swagger_to_request_response(cls, api_struct_list, output_dir):
-        pass
+        class_body = ["# -*- coding: utf-8 -*-\n",
+                      "from base.base_request import Message, BaseRequest, BaseResponse\n\n\n"]
+        class_body.append("# 'invalid': [key, value, status_code], eg: [('', 'invalid field', 500)]\n\n")
+        para_cls_list = []
+
+        for api in api_struct_list:
+            # deal with parameters to generate request class
+            para_dict = {}
+            class_body.append("class " + api.name + "_Request(BaseRequest):\n")
+            for para in api.parameters:
+
+                class_body.append(4 * " " + para["name"] + " = " + "\"" + para["name"] + "\"  # ")
+                if "schema" in para.keys():
+                    name = api.name + "_Request_" + para["name"]
+                    para_dict[para["name"]] = "schema"
+                    para_cls_list.append(cls.get_parameter_class(name, para["schema"]))
+                    class_body.append(name)
+
+                else:
+                    class_body.append(para["type"])
+                    para_dict[para["name"]] = para["type"]
+                if "description" in para.keys():
+                    class_body.append(" " + para["description"])
+                class_body.append("\n")
+
+            class_body.append("\n" + 4 * " " + "def get_request(self):\n")
+            class_body.append(8 * " " + "return {\n")
+
+            for para_name in para_dict.keys():
+                class_body.append(12 * " " + "self." + str(para_name) + ": {\n")
+                if para_dict[para_name] == "array":
+                    class_body.append(16 * " " + "'valid': [['']],\n")
+                else:
+                    class_body.append(16 * " " + "'valid': [''],\n")
+                class_body.append(16 * " " + "'boundary': [],\n")
+                class_body.append(16 * " " + "'invalid': []\n")
+                class_body.append(12 * " " + "},\n")
+
+            class_body.append(8 * " " + "}\n\n")
+
+            # deal with responses to generate response class
+            class_body.append("class " + api.name + "_Response(BaseResponse):\n")
+            class_body.append(4 * " " + "schema = ")
+            class_body.append(str(api.responses["200"]["schema"]) + "\n")
+            class_body.append("\n\n")
+
+        for para_cls in para_cls_list:
+            class_body.extend(para_cls)
+
+        with open(output_dir + os.sep + "request_response.py", "w+") as req_res_file:
+            for line in class_body:
+                req_res_file.write(line)
 
 
 if __name__ == '__main__':
-    # file = "../pb/example.proto"
-    file = "../pb/swagger.json"
-    # PB2Py.pb2py(file, output_dir="../project/example/services", api_suffix="", interface_type=APIType.internal,
+    # file = "./doc/platform.proto"
+    # PB2Py.pb2py(file, output_dir="./project/platform/services", api_suffix="", interface_type=APIType.internal,
     #             api_list_name="APINameList")
-    Swagger2Py.swagger2py(file, output_dir="../project/", api_suffix="", interface_type=APIType.internal)
+
+    file = "./doc/platform/swaggerApi.json"
+    Swagger2Py.swagger2py(file, output_dir="./project/", api_suffix="", interface_type=APIType.internal, protocol="http")

@@ -34,16 +34,16 @@ class Message(object):
 
 class BaseRequest(Message):
     __metaclass__ = ABCMeta
-    ImageSource = None
+    # about __metaclass__ https://www.jianshu.com/p/224ffcb8e73e
 
     @abstractmethod
     def get_request(self):
         pass
 
     @classmethod
-    def convert_invalid_param(cls, key, invalid):
+    def convert_param(cls, key, param):
         result = []
-        for param_dict in invalid:
+        for param_dict in param:
             invalid_value, error = param_dict[:2]
             temp = {'key': key, 'value': invalid_value, 'error': error}
             if len(param_dict) == 3:
@@ -53,7 +53,7 @@ class BaseRequest(Message):
         return result
 
     @classmethod
-    def get_valid_invalid(cls):
+    def get_param_value(cls):
         """
         得到默认请求体、无效请求体、边界值请求体，通常用于获得不同的request_body
         :return: 默认请求体、无效请求体、边界值请求体
@@ -61,33 +61,21 @@ class BaseRequest(Message):
         request_dict = cls().get_request()
         default_body = {}
         valid_list = []
-        invalid_params = []
+        invalid_params_list = []
 
         for key, value in request_dict.items():
             if value.get('invalid'):
-                invalid_params.extend(cls.convert_invalid_param(key, value['invalid']))
+                invalid_params_list.extend(cls.convert_param(key, value['invalid']))
 
-            valid_value = value['valid']
+            if value.get('boundary'):
+                invalid_params_list.extend(cls.convert_param(key, value['boundary']))
+
+            valid_value = value['valid'][0]
             default_body[key] = valid_value
-
-            if isinstance(valid_value, dict):
-                pass
-                # for sub_key, sub_val in valid_value.items():
-                #     sub_dict = {sub_key: sub_val['valid']}
-                #     if key not in default_body:
-                #         default_body[key] = sub_dict
-                #     else:
-                #         default_body[key].update(sub_dict)
-                #     invalid_params.extend(cls.convert_invalid_param('{}.{}'.format(key, sub_key), sub_val['invalid']))
-            elif isinstance(valid_value, list) and len(valid_value) > 1 and isinstance(valid_value[1], list):
-                default_body[key] = valid_value[0]
-                for i in valid_value[1:]:
-                    i.insert(1, key)
-                    valid_list.append(i)
 
         valid_list.append(default_body)
 
-        return default_body, invalid_params, valid_list
+        return default_body, invalid_params_list, valid_list
 
     @classmethod
     def get_default_body(cls) -> object:
@@ -95,23 +83,23 @@ class BaseRequest(Message):
         得到默认值请求体
         :return:
         """
-        return cls.get_valid_invalid()[0]
+        return cls.get_param_value()[0]
 
     @classmethod
     def get_invalid_params(cls):
         """
-        得到无效请求体
+        得到无效请求体, 通常用于批量参数校验
         :return:
         """
-        return cls.get_valid_invalid()[1]
+        return cls.get_param_value()[1]
 
     @classmethod
-    def get_valid_list(cls):
+    def get_boundary_list(cls):
         """
         得到边界值请求体
         :return:
         """
-        return cls.get_valid_invalid()[2]
+        return cls.get_param_value()[2]
 
 
 class BaseResponse(Message):
@@ -129,17 +117,14 @@ class BaseResponse(Message):
         """
 
         try:
-            # Schema would rather
             error_info = validate(res, expect.schema)
             if error_info is not None:
                 print(str(error_info))
                 return False
         except ValidationError as e:
-            # Check param error
             print(e)
             return False
         except SchemaError as e:
-            # Your schema syntax error
             print(e)
             return False
         return True
@@ -155,29 +140,29 @@ class BaseResponse(Message):
         return keys_list
 
 
-class GetRequestData(Message):
-    @staticmethod
-    def get_valid_invalid(request_body, body_type):
-        """
-        得到默认请求体、无效请求体、边界值请求体，通常用于获得不同的request_body
-        :return: 默认请求体、无效请求体、边界值请求体
-        """
-        request_dict = request_body
-        valid_body = {}
-        body_list = []
-        body_dict = {}
-        body_dict1 = {}
-        for key, value in request_dict.items():
-            if body_type == 'valid':
-                valid_body[key] = value.get(body_type)
-            elif body_type == 'left_boundary' in value:
-                body_dict[key] = value.get(body_type)[0]
-                body_dict1[key] = value.get(body_type)[1]
-            elif body_type == 'right_boundary' in value:
-                body_dict[key] = value.get(body_type)[0]
-                body_dict1[key] = value.get(body_type)[1]
-            elif body_type == 'invalid' in value:
-                body_list.append({'key': key, 'value': value.get(body_type), 'error': ""})
-        body_list.append(body_dict)
-        body_list.append(body_dict1)
-        return valid_body, body_list
+# class GetRequestData(Message):
+#     @staticmethod
+#     def get_param_value(request_body, body_type):
+#         """
+#         得到默认请求体、无效请求体、边界值请求体，通常用于获得不同的request_body
+#         :return: 默认请求体、无效请求体、边界值请求体
+#         """
+#         request_dict = request_body
+#         valid_body = {}
+#         body_list = []
+#         body_dict = {}
+#         body_dict1 = {}
+#         for key, value in request_dict.items():
+#             if body_type == 'valid':
+#                 valid_body[key] = value.get(body_type)
+#             elif body_type == 'left_boundary' in value:
+#                 body_dict[key] = value.get(body_type)[0]
+#                 body_dict1[key] = value.get(body_type)[1]
+#             elif body_type == 'right_boundary' in value:
+#                 body_dict[key] = value.get(body_type)[0]
+#                 body_dict1[key] = value.get(body_type)[1]
+#             elif body_type == 'invalid' in value:
+#                 body_list.append({'key': key, 'value': value.get(body_type), 'error': ""})
+#         body_list.append(body_dict)
+#         body_list.append(body_dict1)
+#         return valid_body, body_list

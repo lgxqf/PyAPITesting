@@ -1,0 +1,1796 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "订单服务",
+    "version": "last"
+  },
+  "basePath": "/",
+  "tags": [
+    {
+      "name": "获取类接口",
+      "description": null
+    },
+    {
+      "name": "功能类接口",
+      "description": null
+    },
+    {
+      "name": "crm查询",
+      "description": null
+    }
+  ],
+  "schemes": [
+    "http"
+  ],
+  "paths": {
+    "/v2/order/getByQuery": {
+      "post": {
+        "tags": [
+          "获取类接口"
+        ],
+        "summary": "查询订单维度的数据",
+        "description": "不支持批量",
+        "consumes": [
+          "multipart/form-data"
+        ],
+        "parameters": [
+          {
+            "name": "stu_id",
+            "in": "formData",
+            "required": false,
+            "description": "学生id",
+            "type": "string"
+          },
+          {
+            "name": "pay_time_start",
+            "in": "formData",
+            "required": false,
+            "description": "支付时间的起始时间",
+            "type": "string"
+          },
+          {
+            "name": "pay_time_end",
+            "in": "formData",
+            "required": false,
+            "description": "支付时间的结束时间",
+            "type": "string"
+          },
+          {
+            "name": "order_type",
+            "in": "formData",
+            "required": false,
+            "description": "订单类型",
+            "type": "string"
+          },
+          {
+            "name": "active",
+            "in": "formData",
+            "required": false,
+            "description": "有效性，默认1 ",
+            "type": "string"
+          },
+          {
+            "name": "uid",
+            "in": "formData",
+            "required": false,
+            "description": "用户id ",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "string",
+              "format": "binary",
+              "default": "{\"type\":\"object\",\"title\":\"empty object\",\"properties\":{}}"
+            }
+          }
+        }
+      }
+    },
+    "/v2/order/getByQueryV2": {
+      "post": {
+        "tags": [
+          "获取类接口"
+        ],
+        "summary": "查询订单维度的数据分页版本",
+        "description": "不支持批量。\n\n\\{\"stu\\_id\":1611910\\,\"active\":1\\,\"pay\\_time\\_start\":\"2021\\-04\\-30 23:59:59\"\\,\"pay\\_time\\_end\":\"2021\\-04\\-30 23:59:59\"\\,\"order\\_type\":\\[1\\,3\\,4\\]\\,\"page\":1\\,\"uid\":\\[1\\,2\\,3\\]\\}",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "stu_id": {
+                  "type": "number",
+                  "description": "学生id"
+                },
+                "active": {
+                  "type": "number",
+                  "description": "状态"
+                },
+                "pay_time_start": {
+                  "type": "string",
+                  "description": "开始时间"
+                },
+                "pay_time_end": {
+                  "type": "string",
+                  "description": "结束时间"
+                },
+                "order_type": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "description": "订单类型"
+                },
+                "page": {
+                  "type": "number",
+                  "description": "分页页码"
+                },
+                "uid": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "description": "leadsId"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "string",
+              "format": "binary",
+              "default": "{\"type\":\"object\",\"title\":\"empty object\",\"properties\":{}}"
+            }
+          }
+        }
+      }
+    },
+    "/v5/order/create": {
+      "post": {
+        "tags": [
+          "功能类接口"
+        ],
+        "summary": "下单",
+        "description": "> 现阶段支持的订单来源、订单类型、抵扣类型、各抵扣类型下的item_id与flag参考值可查看文档：\n> [订单服务文档](https://rouchi.teammark.com/160380911716245506/articles/186082766690660354)\n\n##### 关于抵扣列表\n\n* item\\_id用来标识针对某个商品的抵扣，例如：针对购买商品列表中id为1的商品使用的优惠劵，那么item\\_id=1。如果某一类抵扣并不作用于单一商品而是作用于整体，例如：使用奖学金抵扣，那么item\\_id=0即可。\n* flag标志位不同抵扣类型表达了不同的含义，例如优惠劵，那么flag填写的是优惠劵的id。再如奖学金，那么flag填写的是具体使用的金额。\n* 详细抵扣类型与规则见文档\n\n##### 关于扩展信息\n\n* 订单系统会将扩展信息中的全部kv存储至扩展表，并会在获取订单详情和列表的时候一并返回给调用端。\n\n##### 请求参数示例\n\n```\n{\n    \"user_id\": 1,\n    \"source_id\": 2,\n    \"type_id\": 2,\n    \"line_id\": 2,\n    \"leads_id\": 10,\n    \"memo\":\"测试\",\n    \"item_list\": [{\n        \"id\": 156,\n        \"amount\": 1\n    }],\n    \"discount_list\": [{\n        \"type\": 100,\n        \"item_id\": 156,\n        \"flag\": 10,\n        \"memo\": \"测试抵扣\"\n    },{\n        \"type\": 101,\n        \"item_id\": 0,\n        \"flag\": 101,\n        \"memo\": \"测试补差\"\n    },{\n        \"type\": 102,\n        \"item_id\": 0,\n        \"flag\": 102,\n        \"memo\": \"测试续报\"\n    },{\n        \"type\": 103,\n        \"item_id\": 0,\n        \"flag\": 103,\n        \"memo\": \"测试插班\"\n    }],\n    <span class=\"colour\" style=\"color: rgb(74, 85, 96);\">{</span>\n        \"renewal_type\":1,//1:新单，2:补差订单，3:续报订单\n        \"cc_id\":1,\n        \"agent_id\":1\n    }\n}\n```",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "user_id": {
+                  "type": "number",
+                  "description": "用户id"
+                },
+                "source_id": {
+                  "type": "number",
+                  "description": "来源id，含义为具体的业务"
+                },
+                "type_id": {
+                  "type": "number",
+                  "description": "订单类型id，含义为具体的需求，例如：团购"
+                },
+                "line_id": {
+                  "type": "number",
+                  "description": "业务线id"
+                },
+                "leads_id": {
+                  "type": "number",
+                  "description": "leads id"
+                },
+                "operator_id": {
+                  "type": "number",
+                  "description": "操作者id，没有不传此参数"
+                },
+                "expire_at": {
+                  "type": "number",
+                  "description": "超时时间戳，标准PHP10位秒级时间戳，不传或为0，默认超时72小时"
+                },
+                "memo": {
+                  "type": "string",
+                  "description": "订单备注"
+                },
+                "item_list": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "number",
+                        "description": "商品id"
+                      },
+                      "amount": {
+                        "type": "number",
+                        "description": "购买数量"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "amount"
+                    ]
+                  },
+                  "description": "商品列表"
+                },
+                "discount_list": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "number",
+                        "description": "抵扣类型"
+                      },
+                      "item_id": {
+                        "type": "number",
+                        "description": "抵扣对应的商品id，必须存在在已购列表中"
+                      },
+                      "flag": {
+                        "type": "number",
+                        "description": "标志位，不同抵扣类型对应不同含义"
+                      },
+                      "memo": {
+                        "type": "string",
+                        "description": "抵扣备注"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "item_id",
+                      "flag"
+                    ]
+                  },
+                  "description": "抵扣列表"
+                },
+                "extend_info": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "业务添加的任意订单扩展信息Map(现所有订单比包含{\"renewal_type\":1,\"cc_id\":1,\"agent_id\":1,\"pt_id:1\"})renewal_type 0:未定义，1:新单，2:续费订单,3:补差订单，4:续报订单"
+                }
+              },
+              "required": [
+                "user_id",
+                "source_id",
+                "type_id"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "number"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "order_no": {
+                      "type": "string",
+                      "description": "订单号"
+                    },
+                    "need_pay": {
+                      "type": "number",
+                      "description": "剩余需支付金额"
+                    }
+                  }
+                },
+                "time": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v5/order/judge": {
+      "post": {
+        "tags": [
+          "功能类接口"
+        ],
+        "summary": "判断是否是欧标订单",
+        "description": "",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {
+                "order_no": {
+                  "type": "string",
+                  "description": "订单编号"
+                }
+              },
+              "required": [
+                "order_no"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "number"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "is_europe": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                "time": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v5/order/cancel": {
+      "post": {
+        "tags": [
+          "功能类接口"
+        ],
+        "summary": "取消订单",
+        "description": "**此接口只能取消待支付的订单**",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {
+                "order_no": {
+                  "type": "string",
+                  "description": "订单编号"
+                }
+              },
+              "required": [
+                "order_no"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {}
+            }
+          }
+        }
+      }
+    },
+    "/v5/order/pay": {
+      "post": {
+        "tags": [
+          "功能类接口"
+        ],
+        "summary": "支付",
+        "description": "> 现阶段支持的支付来源可查看文档：\n> [订单服务文档](https://rouchi.teammark.com/160380911716245506/articles/186082766690660354)",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {
+                "order_no": {
+                  "type": "string",
+                  "description": "订单号"
+                },
+                "pay_infos": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "payer": {
+                        "type": "string",
+                        "description": "支付人信息"
+                      },
+                      "ex_trade_no": {
+                        "type": "string",
+                        "description": "外部交易号"
+                      },
+                      "fee": {
+                        "type": "number",
+                        "description": "支付金额"
+                      },
+                      "source_id": {
+                        "type": "number",
+                        "description": "支付来源id"
+                      },
+                      "memo": {
+                        "type": "string",
+                        "description": "备注信息"
+                      },
+                      "paid_at": {
+                        "type": "string",
+                        "description": "支付时间"
+                      }
+                    },
+                    "required": [
+                      "fee",
+                      "source_id"
+                    ]
+                  },
+                  "description": "支付信息arr"
+                }
+              },
+              "required": [
+                "order_no",
+                "pay_infos"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {}
+            }
+          }
+        }
+      }
+    },
+    "/v5/order/updateExtend": {
+      "post": {
+        "tags": [
+          "功能类接口"
+        ],
+        "summary": "更新订单扩展信息",
+        "description": "",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {
+                "order_no": {
+                  "type": "string",
+                  "description": "订单号"
+                },
+                "memo": {
+                  "type": "string",
+                  "description": "待修改备注信息，修改的备注会新增至以后备注后"
+                },
+                "update_info": {
+                  "type": "object",
+                  "properties": {},
+                  "description": "修改的信息，直接传kv，map即可，不存在的key会新增，已存在的key会更新"
+                }
+              },
+              "required": [
+                "order_no"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {}
+            }
+          }
+        }
+      }
+    },
+    "/v5/order/query": {
+      "post": {
+        "tags": [
+          "功能类接口"
+        ],
+        "summary": "查询订单",
+        "description": "**php_base调用风格：**\n\n``` php\n$order = new \\php_base\\api\\order\\v5\\OrderService('your appId', 'your token');\n$order->query($paramd);\n```\n\n~~~~",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {
+                "order_no": {
+                  "type": "string",
+                  "description": "订单号，多个用英文,分隔"
+                },
+                "user_id": {
+                  "type": "number",
+                  "description": "用户id"
+                },
+                "student_id": {
+                  "type": "number",
+                  "description": "学生id"
+                },
+                "leads_id": {
+                  "type": "number",
+                  "description": "leads_id"
+                },
+                "line_id": {
+                  "type": "number",
+                  "description": "业务线"
+                },
+                "goods_id": {
+                  "type": "number",
+                  "description": "商品id"
+                },
+                "source_id": {
+                  "type": "number",
+                  "description": "订单来源id"
+                },
+                "status": {
+                  "type": "number",
+                  "description": "订单状态"
+                },
+                "type_id": {
+                  "type": "number",
+                  "description": "订单类型"
+                },
+                "ex_trade_no": {
+                  "type": "string",
+                  "description": "外部交易号"
+                },
+                "with_extend": {
+                  "type": "number",
+                  "description": "查询是否附带扩展信息，0不附带1附带"
+                },
+                "with_items": {
+                  "type": "number",
+                  "description": "查询是否附带商品信息，0不附带1附带"
+                },
+                "with_payments": {
+                  "type": "number",
+                  "description": "是否附带支付明细，0不附带1附带"
+                },
+                "with_refunds": {
+                  "type": "number",
+                  "description": "是否附带退款单"
+                },
+                "order_by": {
+                  "type": "string",
+                  "description": "按照x字段排序，多列,分隔"
+                },
+                "desc": {
+                  "type": "number",
+                  "description": "多列,分隔，数量必须与order_by一一对应才生效，传desc或者asc字符串"
+                },
+                "page": {
+                  "type": "number",
+                  "description": "页，默认1"
+                },
+                "per_page": {
+                  "type": "number",
+                  "description": "每页数量，默认10"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "number"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "number"
+                      },
+                      "user_id": {
+                        "type": "number"
+                      },
+                      "student_id": {
+                        "type": "string"
+                      },
+                      "operator_id": {
+                        "type": "number"
+                      },
+                      "no": {
+                        "type": "string"
+                      },
+                      "source": {
+                        "type": "number"
+                      },
+                      "status": {
+                        "type": "number"
+                      },
+                      "type": {
+                        "type": "number"
+                      },
+                      "amount": {
+                        "type": "number"
+                      },
+                      "total_price": {
+                        "type": "number"
+                      },
+                      "paid_at": {
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "type": "string"
+                      },
+                      "updated_at": {
+                        "type": "string"
+                      },
+                      "extend": {
+                        "type": "object",
+                        "properties": {
+                          "memo": {
+                            "type": "string"
+                          },
+                          "test_extend": {
+                            "type": "string"
+                          }
+                        },
+                        "description": "订单扩展信息，内部除memo字段，其余字段不定"
+                      },
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "number"
+                            },
+                            "order_id": {
+                              "type": "number"
+                            },
+                            "item_id": {
+                              "type": "string"
+                            },
+                            "item_price": {
+                              "type": "number"
+                            },
+                            "amount": {
+                              "type": "number"
+                            },
+                            "active": {
+                              "type": "number"
+                            },
+                            "created_at": {
+                              "type": "string"
+                            },
+                            "updated_at": {
+                              "type": "string"
+                            },
+                            "extend": {
+                              "type": "object",
+                              "items": {},
+                              "properties": {
+                                "index": {
+                                  "type": "number"
+                                }
+                              },
+                              "description": "商品扩展信息，内部字段不定"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "order_id",
+                            "item_id",
+                            "item_price",
+                            "amount",
+                            "active",
+                            "created_at",
+                            "updated_at",
+                            "extend"
+                          ]
+                        }
+                      },
+                      "payments": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "number"
+                            },
+                            "order_id": {
+                              "type": "number"
+                            },
+                            "payer": {
+                              "type": "string"
+                            },
+                            "ex_trade_no": {
+                              "type": "string"
+                            },
+                            "fee": {
+                              "type": "number"
+                            },
+                            "source": {
+                              "type": "number"
+                            },
+                            "memo": {
+                              "type": "string"
+                            },
+                            "active": {
+                              "type": "number"
+                            },
+                            "paid_at": {
+                              "type": "string"
+                            },
+                            "created_at": {
+                              "type": "string"
+                            },
+                            "updated_at": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "order_id",
+                            "payer",
+                            "ex_trade_no",
+                            "fee",
+                            "source",
+                            "memo",
+                            "active",
+                            "paid_at",
+                            "created_at",
+                            "updated_at"
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "user_id",
+                      "student_id",
+                      "operator_id",
+                      "no",
+                      "source",
+                      "status",
+                      "type",
+                      "amount",
+                      "total_price",
+                      "paid_at",
+                      "created_at",
+                      "updated_at",
+                      "extend",
+                      "items",
+                      "payments"
+                    ]
+                  }
+                },
+                "time": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v5/order/confirm": {
+      "post": {
+        "tags": [
+          "功能类接口"
+        ],
+        "summary": "确认订单",
+        "description": "**此接口只能取消待支付的订单**",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {
+                "order_no": {
+                  "type": "string",
+                  "description": "订单编号"
+                }
+              },
+              "required": [
+                "order_no"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {}
+            }
+          }
+        }
+      }
+    },
+    "/v2/order/newOrder": {
+      "post": {
+        "tags": [
+          "功能类接口"
+        ],
+        "summary": "美标新订单",
+        "description": "",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "buyer": {
+                  "type": "number",
+                  "description": "学员id"
+                },
+                "source": {
+                  "type": "number",
+                  "description": "订单来源。\n"
+                },
+                "type": {
+                  "type": "number",
+                  "description": "订单类型。\n  ORDER_CPU(1, \"课程订单\"),\n    ORDER_CLASSROOM(2, \"班级订单\"),\n    ORDER_RECHARGE(3, \"充值订单\"),\n    ORDER_TMALL_RECHARGE(4, \"天猫充值订单\"),\n    ORDER_TMALL_CPU(5, \"天猫课程订单\"),\n    ORDER_MANUAL(6, \"手工订单\"),\n    ORDER_YOUZAN_RECHARGE(7, \"有赞充值订单\"),\n    ORDER_YOUZAN_CPU(8, \"有赞课程订单\"),\n    ORDER_GROUPON(10, \"团购业务\");"
+                },
+                "operator": {
+                  "type": "number",
+                  "description": "操作者，比如cc"
+                },
+                "memo": {
+                  "type": "string",
+                  "description": "备注"
+                },
+                "extend": {
+                  "type": "object",
+                  "properties": {
+                    "original_price": {
+                      "type": "number",
+                      "description": "标价 = PCPU.original_price 总和"
+                    },
+                    "actual_price": {
+                      "type": "number",
+                      "description": "售价 = PCPU.sale_price 总和"
+                    },
+                    "payment_price": {
+                      "type": "number",
+                      "description": "支付价格 = actual_price * coupon = Payment.total"
+                    },
+                    "real_price": {
+                      "type": "number",
+                      "description": " Payment.total',   `real_price` int(11) NOT NULL COMMENT '真实价格 = actual_price * coupon - 赠送余额支付"
+                    },
+                    "revenue_price": {
+                      "type": "number",
+                      "description": "真实价格 = actual_price * coupon - 赠送余额支付"
+                    },
+                    "sale_price": {
+                      "type": "number",
+                      "description": "售价 = PCPU.sale_price 总和"
+                    },
+                    "coupon_discount": {
+                      "type": "number"
+                    },
+                    "used_prepaid": {
+                      "type": "number"
+                    },
+                    "used_gift": {
+                      "type": "number"
+                    },
+                    "discount_discount": {
+                      "type": "number",
+                      "description": "订单分期状态"
+                    }
+                  }
+                },
+                "parent_id": {
+                  "type": "number",
+                  "description": "用户id"
+                }
+              },
+              "required": [
+                "buyer",
+                "source",
+                "type",
+                "operator",
+                "parent_id"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean"
+                },
+                "code": {
+                  "type": "number"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "tips": {
+                  "type": "null"
+                },
+                "map": {
+                  "type": "null"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "order_id": {
+                      "type": "number"
+                    },
+                    "order_no": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "code",
+                "data"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "/v5/order/refund": {
+      "post": {
+        "tags": [
+          "功能类接口"
+        ],
+        "summary": "退订单",
+        "description": "",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {
+                "order_no": {
+                  "type": "string",
+                  "description": "订单编号"
+                },
+                "fee": {
+                  "type": "number",
+                  "description": "金额，单位分"
+                },
+                "operator_id": {
+                  "type": "number",
+                  "description": "操作人id"
+                },
+                "memo": {
+                  "type": "string",
+                  "description": "备注"
+                },
+                "detail": {
+                  "type": "object",
+                  "properties": {},
+                  "description": "退款内容详情map，kv业务自定{\"atomic_goods\":[1,2]}"
+                }
+              },
+              "required": [
+                "fee",
+                "order_no"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {}
+            }
+          }
+        }
+      }
+    },
+    "/v5/order/preview": {
+      "post": {
+        "tags": [
+          "功能类接口"
+        ],
+        "summary": "预览",
+        "description": "#### 参数与下单接口基本一致\n`注意：`此接口的意义为下单前的预览，检查抵扣项是否合理等，此时并没有生成订单，因此订单并不会保证真实下单时刻与预览所得结果完全一致！！！\n\n> 现阶段支持的订单来源、订单类型、抵扣类型、各抵扣类型下的item_id与flag参考值可查看文档：\n> [订单服务文档](https://rouchi.teammark.com/160380911716245506/articles/186082766690660354)\n\n##### 关于抵扣列表\n\n* item\\_id用来标识针对某个商品的抵扣，例如：针对购买商品列表中id为1的商品使用的优惠劵，那么item\\_id=1。如果某一类抵扣并不作用于单一商品而是作用于整体，例如：使用奖学金抵扣，那么item\\_id=0即可。\n* flag标志位不同抵扣类型表达了不同的含义，例如优惠劵，那么flag填写的是优惠劵的id。再如奖学金，那么flag填写的是具体使用的金额。\n\n<br>\n<br>\n",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "user_id": {
+                  "type": "number",
+                  "description": "用户id"
+                },
+                "item_list": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "number",
+                        "description": "商品id"
+                      },
+                      "amount": {
+                        "type": "number",
+                        "description": "购买数量"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "amount"
+                    ]
+                  },
+                  "description": "商品列表"
+                },
+                "discount_list": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "number",
+                        "description": "抵扣类型"
+                      },
+                      "item_id": {
+                        "type": "number",
+                        "description": "抵扣对应的商品id，必须存在在已购列表中"
+                      },
+                      "flag": {
+                        "type": "number",
+                        "description": "标志位，不同抵扣类型对应不同含义"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "item_id",
+                      "flag"
+                    ]
+                  },
+                  "description": "抵扣列表"
+                }
+              },
+              "required": [
+                "user_id"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "type": "object",
+              "title": "empty object",
+              "properties": {}
+            }
+          }
+        }
+      }
+    },
+    "/crm/order/query/getOrderEditorId": {
+      "post": {
+        "tags": [
+          "crm查询"
+        ],
+        "summary": "批量查订单创建人",
+        "description": "",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "orderIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "description": "订单id列表"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean"
+                },
+                "code": {
+                  "type": "number",
+                  "description": "成功-200"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "tips": {
+                  "type": "null"
+                },
+                "map": {
+                  "type": "null"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "number"
+                      },
+                      "order_id": {
+                        "type": "number",
+                        "description": "订单id"
+                      },
+                      "editor_id": {
+                        "type": "number",
+                        "description": "编辑人id"
+                      },
+                      "edited_at": {
+                        "type": "string",
+                        "description": "编辑时间"
+                      },
+                      "active": {
+                        "type": "number"
+                      },
+                      "memo": {
+                        "type": "string",
+                        "description": "备注"
+                      }
+                    }
+                  }
+                },
+                "list": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/crm/order/query/getOrderCountNotId": {
+      "post": {
+        "tags": [
+          "crm查询"
+        ],
+        "summary": "指定学生，不等于指定订单id，大于等于价格的订单数量",
+        "description": "",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "student_id": {
+                  "type": "number",
+                  "description": "学生id"
+                },
+                "real_price": {
+                  "type": "number",
+                  "description": "大于等于这个价格"
+                },
+                "id": {
+                  "type": "number",
+                  "description": "订单id，要排除的订单"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean"
+                },
+                "code": {
+                  "type": "number",
+                  "description": "等于200表示系统正常"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "tips": {
+                  "type": "null"
+                },
+                "map": {
+                  "type": "null"
+                },
+                "data": {
+                  "type": "number",
+                  "description": "表示查询的数量，默认=0"
+                },
+                "list": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/crm/order/query/queryCouponOrderListByPage": {
+      "post": {
+        "tags": [
+          "crm查询"
+        ],
+        "summary": "查询优惠券关联订单详情列表",
+        "description": "",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "coupon_no": {
+                  "type": "string",
+                  "description": "优惠券编码"
+                },
+                "time_start": {
+                  "type": "string",
+                  "description": "优惠券创建时间查询范围：开始"
+                },
+                "time_end": {
+                  "type": "string",
+                  "description": "优惠券创建时间查询范围：结束"
+                },
+                "page": {
+                  "type": "number",
+                  "description": "查询页码。0表示第一页，1表示第二页"
+                },
+                "per_page": {
+                  "type": "number",
+                  "description": "分页条数"
+                },
+                "student_ids": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "description": "学生id"
+                  },
+                  "description": "学生id列表"
+                },
+                "order_status": {
+                  "type": "number",
+                  "description": "订单状态"
+                },
+                "order_no": {
+                  "type": "string",
+                  "description": "订单no"
+                },
+                "order_id": {
+                  "type": "string",
+                  "description": "订单id"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean"
+                },
+                "code": {
+                  "type": "number",
+                  "description": "200表示查询成功"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "tips": {
+                  "type": "null"
+                },
+                "map": {
+                  "type": "null"
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "list": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "order_id": {
+                            "type": "number",
+                            "description": "订单id"
+                          },
+                          "student_id": {
+                            "type": "number",
+                            "description": "学生id"
+                          },
+                          "leads_id": {
+                            "type": "number",
+                            "description": "leads_id"
+                          },
+                          "user_id": {
+                            "type": "number",
+                            "description": "user_id"
+                          },
+                          "order_no": {
+                            "type": "string",
+                            "description": "订单编码"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "description": "优惠券创建时间"
+                          },
+                          "order_status": {
+                            "type": "number",
+                            "description": "订单状态"
+                          },
+                          "order_active": {
+                            "type": "number",
+                            "description": "订单是否删除。0表示删除"
+                          },
+                          "agent_mobile": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "代理人电话"
+                          },
+                          "cc_no": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "description": "cc编码"
+                          },
+                          "coupon_id": {
+                            "type": "number",
+                            "description": "优惠券id"
+                          },
+                          "coupon_price": {
+                            "type": "number",
+                            "description": "优惠券价格"
+                          },
+                          "coupon_no": {
+                            "type": "string",
+                            "description": "优惠券编码"
+                          },
+                          "min_required_consumption": {
+                            "type": "number",
+                            "description": "最小课消数, 新学员:课消小于4 老学员:课消大于等于4"
+                          }
+                        },
+                        "required": [
+                          "order_id",
+                          "student_id",
+                          "leads_id",
+                          "user_id",
+                          "order_no",
+                          "created_at",
+                          "order_status",
+                          "order_active",
+                          "agent_mobile",
+                          "cc_no",
+                          "coupon_id",
+                          "coupon_price",
+                          "coupon_no",
+                          "min_required_consumption"
+                        ]
+                      },
+                      "description": "详情列表"
+                    },
+                    "total": {
+                      "type": "number",
+                      "description": "符合条件的总数量"
+                    }
+                  }
+                },
+                "list": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/crm/order/query/getOrderDetailInId": {
+      "post": {
+        "tags": [
+          "crm查询"
+        ],
+        "summary": "根据订单id列表获取订单号",
+        "description": "",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "orderIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "description": "订单id列表"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean"
+                },
+                "code": {
+                  "type": "number",
+                  "description": "200成功"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "tips": {
+                  "type": "null"
+                },
+                "map": {
+                  "type": "null"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "number"
+                      },
+                      "user_id": {
+                        "type": "number"
+                      },
+                      "student_id": {
+                        "type": "number"
+                      },
+                      "no": {
+                        "type": "string",
+                        "description": "订单号"
+                      },
+                      "source_id": {
+                        "type": "number"
+                      },
+                      "status": {
+                        "type": "number"
+                      },
+                      "type": {
+                        "type": "number"
+                      },
+                      "original_price": {
+                        "type": "number"
+                      },
+                      "actual_price": {
+                        "type": "number"
+                      },
+                      "created_at": {
+                        "type": "string"
+                      },
+                      "updated_at": {
+                        "type": "string"
+                      },
+                      "paid_at": {
+                        "type": "null"
+                      },
+                      "active": {
+                        "type": "number"
+                      },
+                      "memo": {
+                        "type": "string"
+                      },
+                      "expired_at": {
+                        "type": "string"
+                      },
+                      "payment_price": {
+                        "type": "number"
+                      },
+                      "real_price": {
+                        "type": "number"
+                      },
+                      "revenue_price": {
+                        "type": "number"
+                      },
+                      "sale_price": {
+                        "type": "number"
+                      },
+                      "coupon_discount": {
+                        "type": "number"
+                      },
+                      "used_prepaid": {
+                        "type": "number"
+                      },
+                      "used_gift": {
+                        "type": "number"
+                      },
+                      "discount_discount": {
+                        "type": "number"
+                      },
+                      "pcpu_discount": {
+                        "type": "number"
+                      },
+                      "inner_discount": {
+                        "type": "number"
+                      },
+                      "leads_id": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                },
+                "list": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/crm/order/query/getOrderIdsDetailByPayNo": {
+      "post": {
+        "tags": [
+          "crm查询"
+        ],
+        "summary": "根据订单第三方交易号模糊获取订单信息",
+        "description": "",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "ex_trade_no": {
+                  "type": "string",
+                  "description": "第三方订单交易号"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean"
+                },
+                "code": {
+                  "type": "number",
+                  "description": "成功-200"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "tips": {
+                  "type": "null"
+                },
+                "map": {
+                  "type": "null"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "description": "订单id列表"
+                  }
+                },
+                "list": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/crm/order/query/getOrderInfoByStudentId": {
+      "post": {
+        "tags": [
+          "crm查询"
+        ],
+        "summary": "获取学员订单信息默认active=1,satus=2",
+        "description": "默认active=1,satus=2",
+        "consumes": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "root",
+            "in": "body",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "student_id": {
+                  "type": "number",
+                  "description": "指定学生的id"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "successful operation",
+            "schema": {
+              "$schema": "http://json-schema.org/draft-04/schema#",
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean"
+                },
+                "code": {
+                  "type": "number"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "tips": {
+                  "type": "null"
+                },
+                "map": {
+                  "type": "null"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "number",
+                    "description": "真实价格real_price列表。分"
+                  }
+                },
+                "list": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

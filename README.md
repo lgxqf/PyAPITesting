@@ -37,3 +37,8 @@
 - Golang ProtoBuf Validator Compiler https://github.com/mwitkow/go-proto-validators/
 - Go Validator https://github.com/mwitkow/go-proto-validators/blob/master/validator.proto
 
+
+## CMD
+pip install pipreqs  
+pipreqs ./ --encoding=utf8 --force
+pip install  -r requirement.txt

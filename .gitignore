@@ -17,3 +17,5 @@ server.proto
 venv/
 __pycache__
 .DS_Store
+
+!requirement.txt
